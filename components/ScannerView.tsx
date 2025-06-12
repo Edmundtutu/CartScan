@@ -1,0 +1,313 @@
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
+import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
+import { FlashlightOff as FlashOff, Slash as FlashOn } from 'lucide-react-native';
+import * as Haptics from 'expo-haptics';
+import { fetchItemByCode } from '@/services/api';
+import { Product } from '@/types';
+
+interface ScannerViewProps {
+  onItemScanned?: (item: Product, code: string) => void;
+}
+
+export default function ScannerView({ onItemScanned }: ScannerViewProps) {
+  const [permission, requestPermission] = useCameraPermissions();
+  const [flashOn, setFlashOn] = useState(false);
+  const [isScanning, setIsScanning] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!permission?.granted) {
+      requestPermission();
+    }
+  }, [permission, requestPermission]);
+
+  const triggerHapticFeedback = () => {
+    if (Platform.OS !== 'web') {
+      // Only runs on iOS/Android
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }
+  };
+
+  const handleBarCodeScanned = async ({ data }: BarcodeScanningResult) => {
+    if (!isScanning || isLoading) return;
+
+    setIsScanning(false);
+    setIsLoading(true);
+
+    try {
+      const product = await fetchItemByCode(data);
+      
+      if (product) {
+        // Trigger haptic feedback on successful scan
+        triggerHapticFeedback();
+        
+        // Call the callback with the scanned item
+        onItemScanned?.(product, data);
+      } else {
+        Alert.alert(
+          'Product Not Found',
+          'The scanned code does not match any product in our database.',
+          [
+            { 
+              text: 'Try Again', 
+              onPress: () => setIsScanning(true)
+            }
+          ]
+        );
+      }
+    } catch (error) {
+      Alert.alert(
+        'Error',
+        'Failed to fetch product information. Please try again.',
+        [
+          { 
+            text: 'Try Again', 
+            onPress: () => setIsScanning(true)
+          }
+        ]
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resumeScanning = () => {
+    setIsScanning(true);
+  };
+
+  if (!permission) {
+    return (
+      <View style={styles.permissionContainer}>
+        <ActivityIndicator size="large" color="#007AFF" />
+        <Text style={styles.permissionText}>Loading camera...</Text>
+      </View>
+    );
+  }
+
+  if (!permission.granted) {
+    return (
+      <View style={styles.permissionContainer}>
+        <Text style={styles.permissionTitle}>Camera Access Required</Text>
+        <Text style={styles.permissionText}>
+          This app needs camera access to scan QR codes and barcodes.
+        </Text>
+        <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
+          <Text style={styles.permissionButtonText}>Grant Permission</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <CameraView
+        style={styles.camera}
+        barcodeScannerEnabled={isScanning}
+        onBarcodeScanned={handleBarCodeScanned}
+        enableTorch={flashOn}
+      >
+        <View style={styles.overlay}>
+          <View style={styles.header}>
+            <TouchableOpacity
+              style={styles.flashButton}
+              onPress={() => setFlashOn(!flashOn)}
+              activeOpacity={0.7}
+            >
+              {flashOn ? (
+                <FlashOn size={24} color="white" />
+              ) : (
+                <FlashOff size={24} color="white" />
+              )}
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.scanArea}>
+            <View style={styles.scanFrame}>
+              <View style={[styles.corner, styles.topLeft]} />
+              <View style={[styles.corner, styles.topRight]} />
+              <View style={[styles.corner, styles.bottomLeft]} />
+              <View style={[styles.corner, styles.bottomRight]} />
+              
+              {!isScanning && !isLoading && (
+                <View style={styles.scanPausedOverlay}>
+                  <Text style={styles.scanPausedText}>Scanning Paused</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.footer}>
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="white" />
+                <Text style={styles.loadingText}>Looking up product...</Text>
+              </View>
+            ) : !isScanning ? (
+              <TouchableOpacity 
+                style={styles.resumeButton}
+                onPress={resumeScanning}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.resumeButtonText}>Resume Scanning</Text>
+              </TouchableOpacity>
+            ) : (
+              <Text style={styles.instructionText}>
+                Position the QR code or barcode within the frame
+              </Text>
+            )}
+          </View>
+        </View>
+      </CameraView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  camera: {
+    flex: 1,
+  },
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 20,
+    paddingTop: 60,
+  },
+  flashButton: {
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 12,
+    borderRadius: 24,
+  },
+  scanArea: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  scanFrame: {
+    width: 250,
+    height: 250,
+    position: 'relative',
+  },
+  corner: {
+    position: 'absolute',
+    width: 20,
+    height: 20,
+    borderColor: 'white',
+    borderWidth: 3,
+  },
+  topLeft: {
+    top: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderBottomWidth: 0,
+  },
+  topRight: {
+    top: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderBottomWidth: 0,
+  },
+  bottomLeft: {
+    bottom: 0,
+    left: 0,
+    borderRightWidth: 0,
+    borderTopWidth: 0,
+  },
+  bottomRight: {
+    bottom: 0,
+    right: 0,
+    borderLeftWidth: 0,
+    borderTopWidth: 0,
+  },
+  scanPausedOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  scanPausedText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Inter-SemiBold',
+  },
+  footer: {
+    padding: 20,
+    paddingBottom: 60,
+    alignItems: 'center',
+  },
+  instructionText: {
+    color: 'white',
+    fontSize: 16,
+    textAlign: 'center',
+    fontFamily: 'Inter-Regular',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: 'white',
+    fontSize: 16,
+    marginTop: 12,
+    fontFamily: 'Inter-Regular',
+  },
+  resumeButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 24,
+  },
+  resumeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Inter-SemiBold',
+  },
+  permissionContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 32,
+    backgroundColor: '#f8f9fa',
+  },
+  permissionTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    fontFamily: 'Inter-Bold',
+    color: '#1a1a1a',
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  permissionText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 32,
+    fontFamily: 'Inter-Regular',
+    lineHeight: 24,
+  },
+  permissionButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+  },
+  permissionButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Inter-SemiBold',
+  },
+});
