@@ -16,6 +16,7 @@ import {
 import { Package, DollarSign, Image as ImageIcon, Hash, Plus, Database, Camera } from 'lucide-react-native';
 import { saveItem, addSampleData, getAllItems } from '@/services/firebase';
 import * as ImagePicker from 'expo-image-picker';
+import { uploadImageToS3 } from '@/helpers/UploadToAWsBucket';
 
 export default function AddItemScreen() {
   const [formData, setFormData] = useState({
@@ -155,7 +156,7 @@ export default function AddItemScreen() {
 
       if (!result.canceled) {
         setCapturedImage(result.assets[0].uri);
-        await uploadImage(result.assets[0].uri);
+        await handleImageUpload(result.assets[0].uri);
       }
     } catch (error) {
       console.error('Error capturing image:', error);
@@ -163,38 +164,24 @@ export default function AddItemScreen() {
     }
   };
 
-  const uploadImage = async (imageUri: string) => {
+  const handleImageUpload = async (imageUri: string) => {
     setIsUploading(true);
     try {
-      const formData = new FormData();
-      formData.append('image', {
-        uri: imageUri,
-        type: 'image/jpeg',
-        name: 'photo.jpg',
-      } as any);
-
-      const response = await fetch('https://gyn.lockfreed.com/uploads.php', {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
+      const result = await uploadImageToS3(imageUri);
+      
+      if (result.success) {
         setFormData(prev => ({
           ...prev,
-          image: data.url,
+          image: result.url,
         }));
-        Alert.alert('Success', 'Image uploaded successfully!');
+        Alert.alert('Success', 'Image uploaded successfully to AWS S3!');
       } else {
-        throw new Error(data.message || 'Upload failed');
+        throw new Error('Upload failed');
       }
     } catch (error) {
       console.error('Error uploading image:', error);
-      Alert.alert('Error', 'Failed to upload image. Please try again.');
+      Alert.alert('Error', 'Failed to upload image to AWS S3. Please try again.');
+      setCapturedImage(null);
     } finally {
       setIsUploading(false);
     }

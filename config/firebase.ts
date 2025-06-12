@@ -3,7 +3,6 @@ import { getDatabase } from 'firebase/database';
 import { getAnalytics } from 'firebase/analytics';
 import { Platform } from 'react-native';
 
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyAnR5ABi4bL7EjTLAaajEkRuJuFDGXxV80",
   authDomain: "scancart-b980b.firebaseapp.com",
