@@ -11,9 +11,11 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
-import { Package, DollarSign, Image as ImageIcon, Hash, Plus, Database } from 'lucide-react-native';
+import { Package, DollarSign, Image as ImageIcon, Hash, Plus, Database, Camera } from 'lucide-react-native';
 import { saveItem, addSampleData, getAllItems } from '@/services/firebase';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function AddItemScreen() {
   const [formData, setFormData] = useState({
@@ -25,6 +27,8 @@ export default function AddItemScreen() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingSample, setIsLoadingSample] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
 
   const handleInputChange = (field: string, value: string) => {
     setFormData(prev => ({
@@ -134,6 +138,68 @@ export default function AddItemScreen() {
     }
   };
 
+  const handleImageCapture = async () => {
+    try {
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera permission is required to take photos.');
+        return;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled) {
+        setCapturedImage(result.assets[0].uri);
+        await uploadImage(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Error capturing image:', error);
+      Alert.alert('Error', 'Failed to capture image. Please try again.');
+    }
+  };
+
+  const uploadImage = async (imageUri: string) => {
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', {
+        uri: imageUri,
+        type: 'image/jpeg',
+        name: 'photo.jpg',
+      } as any);
+
+      const response = await fetch('https://gyn.lockfreed.com/uploads.php', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setFormData(prev => ({
+          ...prev,
+          image: data.url,
+        }));
+        Alert.alert('Success', 'Image uploaded successfully!');
+      } else {
+        throw new Error(data.message || 'Upload failed');
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      Alert.alert('Error', 'Failed to upload image. Please try again.');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView 
@@ -148,7 +214,7 @@ export default function AddItemScreen() {
           <View style={styles.header}>
             <Text style={styles.title}>Add New Product</Text>
             <Text style={styles.subtitle}>
-              Add products to your Firebase database for scanning
+              Add products to the database for scanning
             </Text>
           </View>
 
@@ -160,7 +226,7 @@ export default function AddItemScreen() {
               </View>
               <TextInput
                 style={styles.input}
-                placeholder="e.g., 123456789012 or qr-demo"
+                placeholder="e.g., 123456789012"
                 value={formData.serialNumber}
                 onChangeText={(value) => handleInputChange('serialNumber', value)}
                 autoCapitalize="none"
@@ -174,20 +240,20 @@ export default function AddItemScreen() {
               </View>
               <TextInput
                 style={styles.input}
-                placeholder="e.g., iPhone 15 Pro"
+                placeholder="e.g., Bread"
                 value={formData.name}
                 onChangeText={(value) => handleInputChange('name', value)}
               />
             </View>
 
             <View style={styles.inputGroup}>
-              <View style={styles.inputHeader}>
+                <View style={styles.inputHeader}>
                 <DollarSign size={20} color="#007AFF" />
                 <Text style={styles.inputLabel}>Price</Text>
-              </View>
+                </View>
               <TextInput
                 style={styles.input}
-                placeholder="e.g., 999.99"
+                placeholder="e.g., 5000"
                 value={formData.price}
                 onChangeText={(value) => handleInputChange('price', value)}
                 keyboardType="decimal-pad"
@@ -197,16 +263,46 @@ export default function AddItemScreen() {
             <View style={styles.inputGroup}>
               <View style={styles.inputHeader}>
                 <ImageIcon size={20} color="#007AFF" />
-                <Text style={styles.inputLabel}>Image URL</Text>
+                <Text style={styles.inputLabel}>Image</Text>
               </View>
-              <TextInput
-                style={styles.input}
-                placeholder="https://images.pexels.com/..."
-                value={formData.image}
-                onChangeText={(value) => handleInputChange('image', value)}
-                autoCapitalize="none"
-                keyboardType="url"
-              />
+              
+              <View style={styles.imageOptions}>
+                <TouchableOpacity
+                  style={[styles.imageOption, styles.cameraButton]}
+                  onPress={handleImageCapture}
+                  disabled={isUploading}
+                >
+                  {isUploading ? (
+                    <ActivityIndicator size="small" color="#007AFF" />
+                  ) : (
+                    <>
+                      <Camera size={20} color="#007AFF" />
+                      <Text style={styles.cameraButtonText}>Take Photo</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <View style={styles.imageUrlContainer}>
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Or enter image URL"
+                    value={formData.image}
+                    onChangeText={(value) => handleInputChange('image', value)}
+                    autoCapitalize="none"
+                    keyboardType="url"
+                  />
+                </View>
+              </View>
+
+              {capturedImage && (
+                <View style={styles.previewContainer}>
+                  <Image
+                    source={{ uri: capturedImage }}
+                    style={styles.imagePreview}
+                    resizeMode="cover"
+                  />
+                </View>
+              )}
             </View>
 
             <View style={styles.inputGroup}>
@@ -216,7 +312,6 @@ export default function AddItemScreen() {
               </View>
               <TextInput
                 style={styles.input}
-                placeholder="e.g., APL-IPH15P-001"
                 value={formData.serial}
                 onChangeText={(value) => handleInputChange('serial', value)}
                 autoCapitalize="characters"
@@ -457,5 +552,44 @@ const styles = StyleSheet.create({
     color: '#666',
     fontFamily: 'Inter-Regular',
     lineHeight: 20,
+  },
+  imageOptions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 12,
+  },
+  imageOption: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  cameraButton: {
+    backgroundColor: '#f0f8ff',
+    borderColor: '#007AFF',
+  },
+  cameraButtonText: {
+    color: '#007AFF',
+    fontSize: 14,
+    fontWeight: '600',
+    fontFamily: 'Inter-SemiBold',
+    marginLeft: 6,
+  },
+  imageUrlContainer: {
+    flex: 2,
+  },
+  previewContainer: {
+    marginTop: 12,
+    borderRadius: 12,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#E5E5E7',
+  },
+  imagePreview: {
+    width: '100%',
+    height: 200,
   },
 });

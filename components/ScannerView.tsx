@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Platform } from 'react-native';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { FlashlightOff as FlashOff, Slash as FlashOn } from 'lucide-react-native';
@@ -15,12 +16,37 @@ export default function ScannerView({ onItemScanned }: ScannerViewProps) {
   const [flashOn, setFlashOn] = useState(false);
   const [isScanning, setIsScanning] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
+  const cameraRef = useRef<CameraView>(null);
 
   useEffect(() => {
     if (!permission?.granted) {
       requestPermission();
     }
   }, [permission, requestPermission]);
+
+  // Handle focus and blur effects for camera state
+  useFocusEffect(
+    useCallback(() => {
+      let isActive = true;
+
+      const initializeCamera = async () => {
+        if (isActive) {
+          setIsScanning(true);
+          setIsLoading(false);
+          setFlashOn(false);
+        }
+      };
+
+      initializeCamera();
+
+      return () => {
+        isActive = false;
+        setIsScanning(false);
+        setIsLoading(false);
+        setFlashOn(false);
+      };
+    }, [])
+  );
 
   const triggerHapticFeedback = () => {
     if (Platform.OS !== 'web') {
@@ -102,9 +128,12 @@ export default function ScannerView({ onItemScanned }: ScannerViewProps) {
   return (
     <View style={styles.container}>
       <CameraView
+        ref={cameraRef}
         style={styles.camera}
-        barcodeScannerEnabled={isScanning}
-        onBarcodeScanned={handleBarCodeScanned}
+        barcodeScannerSettings={{
+          barcodeTypes: ['qr', 'ean13', 'ean8','code128']
+        }}
+        onBarcodeScanned={isScanning ? handleBarCodeScanned : undefined}
         enableTorch={flashOn}
       >
         <View style={styles.overlay}>

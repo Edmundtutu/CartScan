@@ -52,7 +52,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Scanner',
+          tabBarLabel: 'Scanner',
           headerTitle: 'QR & Barcode Scanner',
           headerRight: () => <CartIconBadge />,
           tabBarIcon: ({ size, color }) => (
@@ -63,7 +63,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="add-item"
         options={{
-          title: 'Add Item',
+          tabBarLabel: 'Add Item',
           headerTitle: 'Add New Item',
           tabBarIcon: ({ size, color }) => (
             <Plus size={size} color={color} />
@@ -73,7 +73,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="cart"
         options={{
-          title: 'Cart',
+          tabBarLabel: 'Cart',
           headerTitle: 'Shopping Cart',
           tabBarIcon: ({ size, color }) => (
             <CartTabIcon size={size} color={color} />

@@ -89,7 +89,7 @@ export default function ScannedItemDialog({ item, code, onClose }: ScannedItemDi
               </View>
               
               <Text style={styles.price}>
-                ${item.price.toFixed(2)}
+                UGX {item.price.toFixed(2)} {/* Format price for UGX */}
               </Text>
             </View>
 

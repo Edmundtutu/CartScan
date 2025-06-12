@@ -14,26 +14,37 @@ export async function fetchItemByCode(code: string): Promise<Product | null> {
 
 // Keep the random product function for demo purposes
 // This will be replaced with Firebase data once items are added
-export function getRandomProduct(): Product {
-  const mockProducts: Product[] = [
+export function getRandomProduct(): Product {  const mockProducts: Product[] = [
     {
-      name: 'iPhone 15 Pro',
-      price: 999.99,
+      name: 'Tecno Camon 20',
+      price: 899000, // Price in UGX
+      image: 'https://images.pexels.com/photos/1042143/pexels-photo-1042143.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=cover',
+      serial: 'TEC-CAM20-001',
+    },
+    {
+      name: 'itel P40',
+      price: 450000, // Price in UGX
       image: 'https://images.pexels.com/photos/699122/pexels-photo-699122.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=cover',
-      serial: 'APL-IPH15P-001',
+      serial: 'ITL-P40-002',
     },
     {
-      name: 'Samsung Galaxy S24',
-      price: 899.99,
+      name: 'Infinix Hot 30',
+      price: 750000, // Price in UGX
       image: 'https://images.pexels.com/photos/607812/pexels-photo-607812.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=cover',
-      serial: 'SAM-GS24-002',
+      serial: 'INF-HOT30-003',
     },
     {
-      name: 'MacBook Pro 14"',
-      price: 1999.99,
-      image: 'https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=300&h=300&fit=cover',
-      serial: 'APL-MBP14-003',
+      name: 'MTN MiFi Router',
+      price: 120000, // Price in UGX
+      image: 'https://images.pexels.com/photos/4218883/pexels-photo-4218883.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=cover',
+      serial: 'MTN-MIFI-004',
     },
+    {
+      name: 'Airtel 4G Router',
+      price: 115000, // Price in UGX
+      image: 'https://images.pexels.com/photos/4218546/pexels-photo-4218546.jpeg?auto=compress&cs=tinysrgb&w=300&h=300&fit=cover',
+      serial: 'ATL-4GR-005',
+    }
   ];
 
   return mockProducts[Math.floor(Math.random() * mockProducts.length)];
