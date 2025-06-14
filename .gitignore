@@ -1,5 +1,7 @@
 # dependencies
 node_modules/
+# Helpers
+helpers/
 
 # expo
 .expo/
@@ -33,5 +35,3 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
-# Helpers
-helpers/
