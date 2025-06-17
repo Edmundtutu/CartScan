@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, Animated } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, Image, TouchableOpacity, Alert, Animated, Platform } from 'react-native';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { Minus, Plus, Trash2, ShoppingCart } from 'lucide-react-native';
 import { CartItem } from '@/types';
@@ -13,6 +13,8 @@ export default function CartItemCard({ item }: CartItemCardProps) {
   const { dispatch } = useCart();
   const [translateX] = useState(new Animated.Value(0));
   const [cardScale] = useState(new Animated.Value(1));
+  const buttonScale = useRef(new Animated.Value(1)).current;
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleSwipe = (event: any) => {
     if (event.nativeEvent.state === State.END) {
@@ -74,10 +76,40 @@ export default function CartItemCard({ item }: CartItemCardProps) {
     }
   };
 
+  const animateButtonPress = (pressed: boolean) => {
+    Animated.spring(buttonScale, {
+      toValue: pressed ? 0.95 : 1,
+      useNativeDriver: true,
+      tension: 200,
+      friction: 20
+    }).start();
+  };
+
+  const startLongPress = (action: () => void) => {
+    longPressTimer.current = setTimeout(() => {
+      action();
+      // Continue the action every 100ms while pressed
+      const intervalId = setInterval(action, 100);
+      longPressTimer.current = intervalId;
+    }, 100);
+  };
+
+  const stopLongPress = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      clearInterval(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
   const totalPrice = (item.price * item.quantity).toFixed(2); // Format price for UGX
 
   return (
-    <PanGestureHandler onHandlerStateChange={handleSwipe}>
+    <PanGestureHandler
+      activeOffsetX={-10}
+      activeOffsetY={[-20, 20]} // Allow some vertical movement before failing
+      onHandlerStateChange={handleSwipe}
+    >
       <Animated.View 
         style={[
           styles.container,
@@ -112,16 +144,14 @@ export default function CartItemCard({ item }: CartItemCardProps) {
                 style={styles.deleteButton}
                 onPress={showDeleteConfirmation}
                 activeOpacity={0.7}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Trash2 size={18} color="#FF3B30" />
+                <Trash2 size={16} color="#FF3B30" />
               </TouchableOpacity>
             </View>
             
-            <Text style={styles.productSerial}>
-              SKU: {item.serial}
-            </Text>
-            
-            {/* Price and Quantity Section */}            <View style={styles.bottomSection}>
+            {/* Price and Quantity Section */}
+            <View style={styles.bottomSection}>
               <View style={styles.priceSection}>
                 <Text style={styles.unitPrice}>
                   UGX {item.price.toFixed(2)} each
@@ -135,9 +165,16 @@ export default function CartItemCard({ item }: CartItemCardProps) {
                 <TouchableOpacity 
                   style={[styles.quantityButton, styles.decrementButton]} 
                   onPress={decrementQuantity}
+                  onLongPress={() => startLongPress(decrementQuantity)}
+                  onPressIn={() => animateButtonPress(true)}
+                  onPressOut={() => {
+                    animateButtonPress(false);
+                    stopLongPress();
+                  }}
                   activeOpacity={0.7}
+                  delayPressIn={0}
                 >
-                  <Minus size={16} color="#007AFF" />
+                  <Minus size={14} color="#007AFF" />
                 </TouchableOpacity>
                 
                 <View style={styles.quantityDisplay}>
@@ -149,9 +186,16 @@ export default function CartItemCard({ item }: CartItemCardProps) {
                 <TouchableOpacity 
                   style={[styles.quantityButton, styles.incrementButton]} 
                   onPress={incrementQuantity}
+                  onLongPress={() => startLongPress(incrementQuantity)}
+                  onPressIn={() => animateButtonPress(true)}
+                  onPressOut={() => {
+                    animateButtonPress(false);
+                    stopLongPress();
+                  }}
                   activeOpacity={0.7}
+                  delayPressIn={0}
                 >
-                  <Plus size={16} color="#007AFF" />
+                  <Plus size={14} color="#007AFF" />
                 </TouchableOpacity>
               </View>
             </View>
@@ -172,7 +216,7 @@ export default function CartItemCard({ item }: CartItemCardProps) {
               }
             ]}
           >
-            <Trash2 size={16} color="#FF3B30" />
+            <Trash2 size={14} color="#FF3B30" />
             <Text style={styles.swipeHintText}>Release to delete</Text>
           </Animated.View>
         </View>
@@ -184,21 +228,24 @@ export default function CartItemCard({ item }: CartItemCardProps) {
 const styles = StyleSheet.create({
   container: {
     marginHorizontal: 16,
-    marginVertical: 6,
+    marginVertical: 4, // Reduced from 6
   },
   card: {
     backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: 12, // Reduced from 16
+    padding: 12, // Reduced from 16
     flexDirection: 'row',
-    shadowColor: '#000',
+    shadowColor: Platform.select({
+      ios: '#000',
+      android: '#000000'
+    }),
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 1, // Reduced shadow
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.05, // Reduced shadow
+    shadowRadius: 2, // Reduced shadow
+    elevation: 1, // Reduced elevation
     borderWidth: 1,
     borderColor: '#f0f0f0',
   },
@@ -206,22 +253,22 @@ const styles = StyleSheet.create({
   // Image Section
   imageContainer: {
     position: 'relative',
-    marginRight: 16,
+    marginRight: 12, // Reduced from 16
   },
   image: {
-    width: 80,
-    height: 80,
-    borderRadius: 12,
+    width: 60, // Reduced from 80
+    height: 60, // Reduced from 80
+    borderRadius: 10, // Reduced from 12
     backgroundColor: '#f8f9fa',
   },
   quantityBadge: {
     position: 'absolute',
-    top: -6,
-    right: -6,
+    top: -4, // Reduced from -6
+    right: -4, // Reduced from -6
     backgroundColor: '#007AFF',
-    borderRadius: 12,
-    minWidth: 24,
-    height: 24,
+    borderRadius: 10, // Reduced from 12
+    minWidth: 20, // Reduced from 24
+    height: 20, // Reduced from 24
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
@@ -229,7 +276,7 @@ const styles = StyleSheet.create({
   },
   quantityBadgeText: {
     color: 'white',
-    fontSize: 12,
+    fontSize: 11, // Reduced from 12
     fontWeight: '700',
     fontFamily: 'Inter-Bold',
   },
@@ -243,24 +290,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 4, // Reduced from 8
   },
   productName: {
-    fontSize: 16,
+    fontSize: 15, // Reduced from 16
     fontWeight: '600',
     fontFamily: 'Inter-SemiBold',
     color: '#1a1a1a',
     flex: 1,
     marginRight: 8,
-    lineHeight: 20,
-  },
-  productSerial: {
-    fontSize: 12,
-    color: '#8e8e93',
-    fontFamily: 'Inter-Regular',
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    lineHeight: 18, // Reduced from 20
   },
   
   // Bottom Section
@@ -268,18 +307,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-end',
+    marginTop: 8, // Added margin top
   },
   priceSection: {
     flex: 1,
   },
   unitPrice: {
-    fontSize: 12,
+    fontSize: 11, // Reduced from 12
     color: '#8e8e93',
     fontFamily: 'Inter-Regular',
     marginBottom: 2,
   },
   totalPrice: {
-    fontSize: 18,
+    fontSize: 16, // Reduced from 18
     fontWeight: '700',
     fontFamily: 'Inter-Bold',
     color: '#007AFF',
@@ -290,24 +330,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8f9fa',
-    borderRadius: 16,
-    padding: 4,
+    borderRadius: 12, // Reduced from 16
+    padding: 3, // Reduced from 4
   },
   quantityButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 12,
+    width: 32, // Reduced from 40
+    height: 32, // Reduced from 40
+    borderRadius: 10, // Reduced from 12
     backgroundColor: 'white',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#007AFF',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1, // Reduced shadow
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.05, // Reduced shadow
+    shadowRadius: 2, // Reduced shadow
+    elevation: 1, // Reduced elevation
   },
   decrementButton: {
     marginRight: 2,
@@ -316,21 +356,20 @@ const styles = StyleSheet.create({
     marginLeft: 2,
   },
   quantityDisplay: {
-    minWidth: 32,
+    minWidth: 28, // Reduced from 32
     alignItems: 'center',
     justifyContent: 'center',
   },
   quantityText: {
-    fontSize: 16,
+    fontSize: 14, // Reduced from 16
     fontWeight: '600',
     fontFamily: 'Inter-SemiBold',
     color: '#1a1a1a',
   },
   
-  // Delete Button
   deleteButton: {
-    padding: 4,
-    borderRadius: 8,
+    padding: 8, // Reduced from 12
+    borderRadius: 6, // Reduced from 8
   },
   
   // Swipe Indicator
@@ -341,18 +380,18 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    width: 100,
+    width: 80, // Reduced from 100
   },
   swipeHint: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 59, 48, 0.1)',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 10, // Reduced from 12
+    paddingVertical: 6, // Reduced from 8
+    borderRadius: 16, // Reduced from 20
   },
   swipeHintText: {
-    fontSize: 11,
+    fontSize: 10, // Reduced from 11
     color: '#FF3B30',
     fontFamily: 'Inter-Medium',
     fontWeight: '500',

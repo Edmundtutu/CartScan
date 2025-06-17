@@ -1,37 +1,46 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  TouchableOpacity, 
+import React, { useState, useRef, useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
   SafeAreaView,
   Alert,
   Animated
 } from 'react-native';
 import { ShoppingBag, Trash2, AlertCircle } from 'lucide-react-native';
 import CartItemCard from '@/components/CartItemCard';
+import QrCodeDialogBox from '@/components/QrCodeDialogBox';
 import { useCart } from '@/context/CartContext';
 import { CartItem } from '@/types';
 
 export default function CartScreen() {
   const { state, dispatch, totalItems } = useCart();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showReceipt, setShowReceipt] = useState(false);
+  
+  // Scroll-aware UI state
+  const [isScrolling, setIsScrolling] = useState(false);
+  const scrollTimeoutRef = useRef(null);
+  const lastScrollY = useRef(0);
+  
+  // Animation values for hiding/showing header only
+  const headerOpacity = useRef(new Animated.Value(1)).current;
 
   const handleClearCart = () => {
     if (state.items.length === 0) return;
-    
+
     Alert.alert(
       'Clear Cart',
       'Are you sure you want to remove all items from your cart?',
       [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Clear All', 
+        {
+          text: 'Clear All',
           style: 'destructive',
           onPress: () => {
             setIsDeleting(true);
-            // Add a small delay for visual feedback
             setTimeout(() => {
               dispatch({ type: 'CLEAR_CART' });
               setIsDeleting(false);
@@ -45,46 +54,28 @@ export default function CartScreen() {
   const handleCheckout = () => {
     if (state.items.length === 0) {
       Alert.alert(
-        'Empty Cart', 
+        'Empty Cart',
         'Please add some items to your cart first.',
         [{ text: 'OK', style: 'default' }]
       );
       return;
     }
 
-    const finalTotal = (state.total * 1.08).toFixed(2);
-    
-    Alert.alert(
-      'Confirm Checkout',
-      `Proceed with checkout for ${totalItems} ${totalItems === 1 ? 'item' : 'items'} totaling $${finalTotal}?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Proceed', 
-          style: 'default',
-          onPress: () => {
-            Alert.alert(
-              'Checkout not yet integrated',
-              'Coming soon! payment processor.',
-              [
-                { 
-                  text: 'Continue Shopping', 
-                  onPress: () => dispatch({ type: 'CLEAR_CART' })
-                }
-              ]
-            );
-          }
-        },
-      ]
-    );
+    setShowReceipt(true);
   };
 
   const renderCartItem = ({ item, index }: { item: CartItem; index: number }) => (
     <Animated.View
-      style={{
-        opacity: isDeleting ? 0.5 : 1,
-        transform: [{ scale: isDeleting ? 0.95 : 1 }]
-      }}
+      style={[
+        {
+          opacity: isDeleting ? 0.5 : 1,
+          transform: [{ scale: isDeleting ? 0.95 : 1 }]
+        },
+        // Add subtle scale animation during scrolling for premium feel
+        isScrolling && {
+          transform: [{ scale: 0.98 }]
+        }
+      ]}
     >
       <CartItemCard item={item} />
     </Animated.View>
@@ -115,55 +106,83 @@ export default function CartScreen() {
 
     return (
       <View style={styles.summaryContainer}>
-        <Text style={styles.summaryTitle}>Order Summary</Text>
-        
+        <Text style={styles.summaryTitle}>Summary</Text>
+
         <View style={styles.summaryRow}>
           <Text style={styles.summaryLabel}>
             Subtotal ({totalItems} {totalItems === 1 ? 'item' : 'items'})
           </Text>
-          <Text style={styles.summaryValue}>UGX {subtotal.toFixed(2)}</Text> {/* Format subtotal for UGX */}
+          <Text style={styles.summaryValue}>UGX {subtotal.toFixed(2)}</Text>
         </View>
-        
-        {/* <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Tax (18%)</Text>
-          <Text style={styles.summaryValue}>UGX {tax.toFixed(2)}</Text> 
-        </View>
-        
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Shipping</Text>
-          <Text style={styles.summaryValue}>Free</Text>
-        </View> */}
-        
+
         <View style={styles.summaryDivider} />
-        
+
         <View style={styles.summaryRow}>
           <Text style={styles.totalLabel}>Total</Text>
-          <Text style={styles.totalValue}>UGX {total.toFixed(2)}</Text> {/* Format total for UGX */}
+          <Text style={styles.totalValue}>UGX {total.toFixed(2)}</Text>
         </View>
+
+        <TouchableOpacity
+          style={[
+            styles.checkoutButton,
+            isDeleting && styles.checkoutButtonDisabled
+          ]}
+          onPress={handleCheckout}
+          activeOpacity={0.8}
+          disabled={isDeleting}
+        >
+          <Text style={[
+            styles.checkoutButtonText,
+            isDeleting && styles.checkoutButtonTextDisabled
+          ]}>
+            {isDeleting ? 'Updating Cart...' : 'Proceed to Checkout'}
+          </Text>
+        </TouchableOpacity>
       </View>
     );
   };
 
   const renderHeader = () => (
-    <View style={styles.header}>
-      <View style={styles.headerLeft}>
-        <Text style={styles.headerTitle}>In Your Cart</Text>
-        <Text style={styles.headerSubtitle}>
-          {totalItems} {totalItems === 1 ? 'item' : 'items'}
-        </Text>
+    <Animated.View 
+      style={[
+        styles.headerOverlay,
+        {
+          opacity: headerOpacity,
+        }
+      ]}
+    >
+      <View style={styles.headerContent}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerSubtitle}>
+            {totalItems} {totalItems === 1 ? 'item' : 'items'}
+          </Text>
+        </View>
+
+        {state.items.length > 0 && (
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={handleClearCart}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.clearButtonText}>Clear All</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      
-      {state.items.length > 0 && (
-        <TouchableOpacity 
-          style={styles.clearButton}
-          onPress={handleClearCart}
-          activeOpacity={0.7}
-        >
-          <Trash2 size={16} color="#FF3B30" />
-          <Text style={styles.clearButtonText}>Clear All</Text>
-        </TouchableOpacity>
-      )}
-    </View>
+    </Animated.View>
+  );
+
+  // Scroll indicator that appears during scrolling
+  const renderScrollIndicator = () => (
+    <Animated.View 
+      style={[
+        styles.scrollIndicator,
+        {
+          opacity: isScrolling ? 1 : 0,
+        }
+      ]}
+    >
+      <View style={styles.scrollBar} />
+    </Animated.View>
   );
 
   return (
@@ -172,41 +191,49 @@ export default function CartScreen() {
         renderEmptyCart()
       ) : (
         <>
-          {renderHeader()}
-
+          {/* Full Screen Cart List with Footer Component */}
           <FlatList
             data={state.items}
             renderItem={renderCartItem}
             keyExtractor={(item) => item.code}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContainer}
-            ItemSeparatorComponent={() => <View style={styles.itemSeparator} />}
-            // Optimize for swipe gestures
-            scrollEnabled={true}
-            bounces={true}
-            overScrollMode="auto"
+            style={styles.fullScreenList}
+            contentContainerStyle={styles.listContentContainer}
+            ListFooterComponent={renderCartSummary}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={20}
+            updateCellsBatchingPeriod={30}
+            initialNumToRender={10}
+            windowSize={15}
+            decelerationRate="normal"
+            scrollEventThrottle={8}
           />
 
-          <View style={styles.footer}>
-            {renderCartSummary()}
-            
-            <TouchableOpacity 
-              style={[
-                styles.checkoutButton,
-                isDeleting && styles.checkoutButtonDisabled
-              ]}
-              onPress={handleCheckout}
-              activeOpacity={0.8}
-              disabled={isDeleting}
-            >
-              <Text style={[
-                styles.checkoutButtonText,
-                isDeleting && styles.checkoutButtonTextDisabled
-              ]}>
-                {isDeleting ? 'Updating Cart...' : 'Proceed to Checkout'}
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* Overlay Components */}
+          {renderHeader()}
+          {renderScrollIndicator()}
+
+          <QrCodeDialogBox
+            visible={showReceipt}
+            onClose={() => {
+              setShowReceipt(false);
+              dispatch({ type: 'CLEAR_CART' });
+            }}
+            receiptData={{
+              transactionId: `TXN${Date.now()}`,
+              amount: state.total,
+              currency: 'UGX',
+              merchantName: 'Fresco Supermarket',
+              date: new Date().toLocaleDateString(),
+              time: new Date().toLocaleTimeString(),
+              items: state.items.map(item => ({
+                name: item.name,
+                quantity: item.quantity,
+                price: item.price
+              })),
+              paymentMethod: 'Cash on Delivery'
+            }}
+          />
         </>
       )}
     </SafeAreaView>
@@ -218,42 +245,53 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  
-  // Header Styles
-  header: {
+
+  // Full Screen List (takes entire screen)
+  fullScreenList: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  listContentContainer: {
+    paddingTop: 100, // Space for header overlay
+    paddingHorizontal: 0,
+    paddingBottom: 20, // Small padding at bottom
+  },
+
+  // Header Overlay (positioned absolutely)
+  headerOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 1000,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(20px)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(229, 229, 231, 0.6)',
+  },
+  headerContent: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E5E7',
+    paddingHorizontal:5,
+    paddingVertical:5,
   },
   headerLeft: {
     flex: 1,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    fontFamily: 'Inter-Bold',
-    color: '#1a1a1a',
   },
   headerSubtitle: {
     fontSize: 14,
     color: '#8E8E93',
     fontFamily: 'Inter-Regular',
     marginTop: 2,
+    marginLeft: 10,
   },
   clearButton: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: '#FFF5F5',
-    borderWidth: 1,
-    borderColor: '#FFE5E5',
+    borderWidth: 0,
   },
   clearButtonText: {
     fontSize: 14,
@@ -262,17 +300,25 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginLeft: 4,
   },
-  
-  // List Styles
-  listContainer: {
-    paddingTop: 8,
-    paddingBottom: 16,
+
+  // Scroll Indicator
+  scrollIndicator: {
+    position: 'absolute',
+    right: 4,
+    top: 120,
+    bottom: 20,
+    width: 3,
+    zIndex: 999,
+    justifyContent: 'center',
   },
-  itemSeparator: {
-    height: 4,
+  scrollBar: {
+    backgroundColor: '#007AFF',
+    height: 40,
+    borderRadius: 2,
+    opacity: 0.6,
   },
-  
-  // Empty State
+
+  // Empty State (centered in full screen)
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -313,18 +359,16 @@ const styles = StyleSheet.create({
     fontFamily: 'Inter-Regular',
     marginLeft: 8,
   },
-  
-  // Footer & Summary
-  footer: {
-    backgroundColor: 'white',
-    borderTopWidth: 1,
-    borderTopColor: '#E5E5E7',
-    paddingTop: 16,
-    paddingBottom: 32,
-    paddingHorizontal: 20,
-  },
+
+  // Summary Styles (now inline with list)
   summaryContainer: {
+    backgroundColor: 'white',
+    marginHorizontal: 0,
+    marginTop: 20,
     marginBottom: 20,
+    padding: 8,
+    borderRadius: 0,
+    elevation: 0,
   },
   summaryTitle: {
     fontSize: 16,
@@ -352,28 +396,29 @@ const styles = StyleSheet.create({
   },
   summaryDivider: {
     height: 1,
-    backgroundColor: '#E5E5E7',
+    backgroundColor: 'rgba(229, 229, 231, 0.8)',
     marginVertical: 12,
   },
   totalLabel: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter-Bold',
     color: '#1a1a1a',
   },
   totalValue: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     fontFamily: 'Inter-Bold',
     color: '#007AFF',
   },
-  
-  // Checkout Button
+
+  // Checkout Button (now part of summary)
   checkoutButton: {
     backgroundColor: '#007AFF',
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    marginTop: 16,
     shadowColor: '#007AFF',
     shadowOffset: {
       width: 0,

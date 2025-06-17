@@ -6,17 +6,19 @@ import { useCart } from '@/context/CartContext';
 
 function CartTabIcon({ size, color }: { size: number; color: string }) {
   const { totalItems } = useCart();
-  
+
+  if (totalItems <= 0) {
+    return <ShoppingCart size={size} color={color} />;
+  }
+
   return (
     <View style={styles.tabIconContainer}>
       <ShoppingCart size={size} color={color} />
-      {totalItems > 0 && (
-        <View style={styles.tabBadge}>
-          <Text style={styles.tabBadgeText}>
-            {totalItems > 99 ? '99+' : totalItems.toString()}
-          </Text>
-        </View>
-      )}
+      <View style={styles.tabBadge}>
+        <Text style={styles.tabBadgeText}>
+          {totalItems > 99 ? '99+' : totalItems.toString()}
+        </Text>
+      </View>
     </View>
   );
 }
@@ -26,9 +28,7 @@ export default function TabLayout() {
     <Tabs
       screenOptions={{
         headerShown: true,
-        headerStyle: {
-          backgroundColor: '#f8f9fa',
-        },
+        headerStyle: { backgroundColor: '#f8f9fa' },
         headerTitleStyle: {
           fontFamily: 'Inter-SemiBold',
           fontSize: 18,
@@ -52,28 +52,24 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          tabBarLabel: 'Scanner',
+          tabBarLabel: ({ color }) => <Text style={{ color }}>Scanner</Text>,
           headerTitle: 'QR & Barcode Scanner',
           headerRight: () => <CartIconBadge />,
-          tabBarIcon: ({ size, color }) => (
-            <QrCode size={size} color={color} />
-          ),
+          tabBarIcon: ({ size, color }) => <QrCode size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="add-item"
         options={{
-          tabBarLabel: 'Add Item',
+          tabBarLabel: ({ color }) => <Text style={{ color }}>Add Item</Text>,
           headerTitle: 'Add New Item',
-          tabBarIcon: ({ size, color }) => (
-            <Plus size={size} color={color} />
-          ),
+          tabBarIcon: ({ size, color }) => <Plus size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="cart"
         options={{
-          tabBarLabel: 'Cart',
+          tabBarLabel: ({ color }) => <Text style={{ color }}>Cart</Text>,
           headerTitle: 'Shopping Cart',
           tabBarIcon: ({ size, color }) => (
             <CartTabIcon size={size} color={color} />
@@ -103,7 +99,6 @@ const styles = StyleSheet.create({
   tabBadgeText: {
     color: 'white',
     fontSize: 10,
-    fontWeight: '600',
     fontFamily: 'Inter-SemiBold',
   },
 });
