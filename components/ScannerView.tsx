@@ -72,7 +72,8 @@ export default function ScannerView({ onItemScanned }: ScannerViewProps) {
         onItemScanned?.(product, data);
       } else {
         Alert.alert(
-          `Serial: ${data}`, 'Product Not Found',
+          `Serial: ${data}`,
+          'Product not found.',
           [
             { 
               text: 'Try Again', 

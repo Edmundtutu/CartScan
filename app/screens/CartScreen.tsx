@@ -9,7 +9,7 @@ import {
   Alert,
   Animated
 } from 'react-native';
-import { ShoppingBag, Trash2, AlertCircle } from 'lucide-react-native';
+import { ShoppingBag, Trash2, CircleAlert as AlertCircle } from 'lucide-react-native';
 import CartItemCard from '@/components/CartItemCard';
 import QrCodeDialogBox from '@/components/QrCodeDialogBox';
 import { useCart } from '@/context/CartContext';

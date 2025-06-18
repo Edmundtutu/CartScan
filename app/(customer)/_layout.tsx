@@ -1,6 +1,8 @@
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
-import { QrCode, ShoppingCart, Plus } from 'lucide-react-native';
+import { QrCode, ShoppingCart, ArrowLeft } from 'lucide-react-native';
+import { router } from 'expo-router';
+import { TouchableOpacity } from 'react-native';
 import CartIconBadge from '@/components/CartIconBadge';
 import { useCart } from '@/context/CartContext';
 
@@ -23,7 +25,20 @@ function CartTabIcon({ size, color }: { size: number; color: string }) {
   );
 }
 
-export default function TabLayout() {
+function BackButton() {
+  return (
+    <TouchableOpacity
+      style={styles.backButton}
+      onPress={() => router.push('/')}
+      activeOpacity={0.7}
+    >
+      <ArrowLeft size={20} color="#007AFF" />
+      <Text style={styles.backButtonText}>Back</Text>
+    </TouchableOpacity>
+  );
+}
+
+export default function CustomerTabLayout() {
   return (
     <Tabs
       screenOptions={{
@@ -34,6 +49,7 @@ export default function TabLayout() {
           fontSize: 18,
           color: '#1a1a1a',
         },
+        headerLeft: () => <BackButton />,
         tabBarActiveTintColor: '#007AFF',
         tabBarInactiveTintColor: '#8E8E93',
         tabBarStyle: {
@@ -50,20 +66,12 @@ export default function TabLayout() {
       }}
     >
       <Tabs.Screen
-        name="index"
+        name="scanner"
         options={{
           tabBarLabel: ({ color }) => <Text style={{ color }}>Scanner</Text>,
           headerTitle: 'QR & Barcode Scanner',
           headerRight: () => <CartIconBadge />,
           tabBarIcon: ({ size, color }) => <QrCode size={size} color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="add-item"
-        options={{
-          tabBarLabel: ({ color }) => <Text style={{ color }}>Add Item</Text>,
-          headerTitle: 'Add New Item',
-          tabBarIcon: ({ size, color }) => <Plus size={size} color={color} />,
         }}
       />
       <Tabs.Screen
@@ -100,5 +108,17 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 10,
     fontFamily: 'Inter-SemiBold',
+  },
+  backButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    color: '#007AFF',
+    fontFamily: 'Inter-Medium',
+    marginLeft: 4,
   },
 });

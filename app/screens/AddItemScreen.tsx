@@ -16,7 +16,7 @@ import {
 import { Package, DollarSign, Image as ImageIcon, Hash, Plus, Database, Camera } from 'lucide-react-native';
 import { saveItem, addSampleData, getAllItems } from '@/services/firebase';
 import * as ImagePicker from 'expo-image-picker';
-import { uploadImageToS3 } from '@/helpers/UploadToAWsBucket';
+import { uploadImageToS3 } from '@/helpers/UploadToAWsBucket.js';
 
 export default function AddItemScreen() {
   const [formData, setFormData] = useState({
@@ -166,6 +166,8 @@ export default function AddItemScreen() {
 
   const handleImageUpload = async (imageUri: string) => {
     setIsUploading(true);
+        Alert.alert('Success', 'Image uploaded successfully to AWS S3!');
+    
     try {
       const result = await uploadImageToS3(imageUri);
       

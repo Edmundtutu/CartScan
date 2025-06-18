@@ -20,7 +20,6 @@ export default {
     },
     android: {
       adaptiveIcon: {
-        foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#ffffff"
       }
     },
@@ -45,4 +44,4 @@ export default {
       awsBucketName: process.env.AWS_BUCKET_NAME,
     }
   }
-}; 
+};

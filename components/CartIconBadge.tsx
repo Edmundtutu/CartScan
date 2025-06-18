@@ -10,7 +10,7 @@ export default function CartIconBadge() {
   return (
     <TouchableOpacity 
       style={styles.container} 
-      onPress={() => router.push('/(tabs)/cart')}
+      onPress={() => router.push('/(customer)/cart')}
       activeOpacity={0.7}
     >
       <ShoppingCart size={24} color="#007AFF" />
