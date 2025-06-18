@@ -26,6 +26,7 @@ interface ReceiptData {
     price: number;
   }>;
   paymentMethod: string;
+  
 }
 
 interface QrCodeDialogBoxProps {
@@ -111,8 +112,8 @@ Payment: ${receiptData.paymentMethod}`;
             </View>
 
             {/* Share Button */}
-            <TouchableOpacity 
-              style={styles.shareButton} 
+            <TouchableOpacity
+              style={styles.shareButton}
               onPress={handleShare}
             >
               <Ionicons name="share-outline" size={18} color="white" />

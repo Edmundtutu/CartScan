@@ -84,7 +84,7 @@ export default function ScannedItemDialog({ item, code, onClose }: ScannedItemDi
               <View style={styles.serialContainer}>
                 <Package size={14} color="#666" />
                 <Text style={styles.serial}>
-                  {item.serial}
+                  {item.name}
                 </Text>
               </View>
               

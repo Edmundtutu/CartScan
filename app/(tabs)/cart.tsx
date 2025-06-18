@@ -231,7 +231,7 @@ export default function CartScreen() {
                 quantity: item.quantity,
                 price: item.price
               })),
-              paymentMethod: 'Cash on Delivery'
+              paymentMethod: 'Mobile Money'
             }}
           />
         </>
