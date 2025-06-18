@@ -4,14 +4,15 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Pla
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { FlashlightOff as FlashOff, Slash as FlashOn } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { fetchItemByCode } from '@/services/api';
+import { fetchItemByCode, fetchReceiptByTransactionId } from '@/services/api';
 import { Product } from '@/types';
 
 interface ScannerViewProps {
   onItemScanned?: (item: Product, code: string) => void;
+  onReceiptScanned?: (receiptData: any, transactionId: string) => void;
 }
 
-export default function ScannerView({ onItemScanned }: ScannerViewProps) {
+export default function ScannerView({ onItemScanned, onReceiptScanned }: ScannerViewProps) {
   const [permission, requestPermission] = useCameraPermissions();
   const [flashOn, setFlashOn] = useState(false);
   const [isScanning, setIsScanning] = useState(true);
@@ -55,6 +56,28 @@ export default function ScannerView({ onItemScanned }: ScannerViewProps) {
     }
   };
 
+  // Function to check if scanned data is a receipt URL
+  const isReceiptUrl = (data: string): boolean => {
+    try {
+      const url = new URL(data);
+      return url.hostname === 'localhost' && 
+             url.pathname.includes('/swftmomo/api/receipts') && 
+             url.searchParams.has('txd');
+    } catch {
+      return false;
+    }
+  };
+
+  // Function to extract transaction ID from receipt URL
+  const extractTransactionId = (url: string): string | null => {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.searchParams.get('txd');
+    } catch {
+      return null;
+    }
+  };
+
   const handleBarCodeScanned = async ({ data }: BarcodeScanningResult) => {
     if (!isScanning || isLoading) return;
 
@@ -62,30 +85,71 @@ export default function ScannerView({ onItemScanned }: ScannerViewProps) {
     setIsLoading(true);
 
     try {
-      const product = await fetchItemByCode(data);
-      
-      if (product) {
-        // Trigger haptic feedback on successful scan
-        triggerHapticFeedback();
+      // Check if the scanned data is a receipt URL
+      if (isReceiptUrl(data)) {
+        const transactionId = extractTransactionId(data);
         
-        // Call the callback with the scanned item
-        onItemScanned?.(product, data);
+        if (!transactionId) {
+          Alert.alert(
+            'Invalid Receipt URL',
+            'The scanned QR code does not contain a valid transaction ID.',
+            [
+              { 
+                text: 'Try Again', 
+                onPress: () => setIsScanning(true)
+              }
+            ]
+          );
+          return;
+        }
+
+        const receiptData = await fetchReceiptByTransactionId(transactionId);
+        
+        if (receiptData) {
+          // Trigger haptic feedback on successful scan
+          triggerHapticFeedback();
+          
+          // Call the callback with the receipt data
+          onReceiptScanned?.(receiptData, transactionId);
+        } else {
+          Alert.alert(
+            'Receipt Not Found',
+            `No receipt found for transaction ID: ${transactionId}`,
+            [
+              { 
+                text: 'Try Again', 
+                onPress: () => setIsScanning(true)
+              }
+            ]
+          );
+        }
       } else {
-        Alert.alert(
-          `Serial: ${data}`,
-          'Product not found.',
-          [
-            { 
-              text: 'Try Again', 
-              onPress: () => setIsScanning(true)
-            }
-          ]
-        );
+        // Handle as product code (existing logic)
+        const product = await fetchItemByCode(data);
+        
+        if (product) {
+          // Trigger haptic feedback on successful scan
+          triggerHapticFeedback();
+          
+          // Call the callback with the scanned item
+          onItemScanned?.(product, data);
+        } else {
+          Alert.alert(
+            `Serial: ${data}`,
+            'Product not found.',
+            [
+              { 
+                text: 'Try Again', 
+                onPress: () => setIsScanning(true)
+              }
+            ]
+          );
+        }
       }
     } catch (error) {
       Alert.alert(
         'Error',
-        'Failed to fetch product information. Please try again.',
+        'Failed to fetch information. Please try again.',
         [
           { 
             text: 'Try Again', 
@@ -170,7 +234,7 @@ export default function ScannerView({ onItemScanned }: ScannerViewProps) {
             {isLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="white" />
-                <Text style={styles.loadingText}>Looking up product...</Text>
+                <Text style={styles.loadingText}>Looking up information...</Text>
               </View>
             ) : !isScanning ? (
               <TouchableOpacity 

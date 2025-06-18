@@ -36,13 +36,8 @@ interface QrCodeDialogBoxProps {
 }
 
 const QrCodeDialogBox = ({ visible, onClose, receiptData }: QrCodeDialogBoxProps) => {
-  // Simplified QR data
-  const receiptQRData = JSON.stringify({
-    id: receiptData.transactionId,
-    amount: receiptData.amount,
-    merchant: receiptData.merchantName,
-    total: `${receiptData.currency} ${receiptData.amount.toFixed(2)}`
-  });
+  // Generate URL for receipt retrieval
+  const receiptQRData = `http://localhost/swftmomo/api/receipts?txd=${receiptData.transactionId}`;
 
   const handleShare = async () => {
     try {

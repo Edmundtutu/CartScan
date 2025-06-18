@@ -12,6 +12,23 @@ export async function fetchItemByCode(code: string): Promise<Product | null> {
   }
 }
 
+// Function to fetch receipt data from server
+export async function fetchReceiptByTransactionId(transactionId: string): Promise<any | null> {
+  try {
+    const response = await fetch(`http://localhost/swftmomo/api/receipts?txd=${transactionId}`);
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    const receiptData = await response.json();
+    return receiptData;
+  } catch (error) {
+    console.error('Error fetching receipt:', error);
+    return null;
+  }
+}
+
 // Keep the random product function for demo purposes
 // This will be replaced with Firebase data once items are added
 export function getRandomProduct(): Product {  const mockProducts: Product[] = [

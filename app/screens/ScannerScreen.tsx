@@ -3,12 +3,15 @@ import { View, StyleSheet, Text, TouchableOpacity, SafeAreaView, Animated } from
 import { Info } from 'lucide-react-native';
 import ScannerView from '@/components/ScannerView';
 import ScannedItemDialog from '@/components/ScannedItemDialog';
+import ScannedReceiptDialog from '@/components/ScannedReceiptDialog';
 import { Product } from '@/types';
 
 export default function ScannerScreen() {
   const [showInfo, setShowInfo] = useState(false);
   const [scannedItem, setScannedItem] = useState<Product | null>(null);
   const [scannedCode, setScannedCode] = useState<string>('');
+  const [scannedReceipt, setScannedReceipt] = useState<any | null>(null);
+  const [transactionId, setTransactionId] = useState<string>('');
   
   // Animation values
   const [overlayOpacity] = useState(new Animated.Value(0));
@@ -18,11 +21,30 @@ export default function ScannerScreen() {
   const handleItemScanned = (item: Product, code: string) => {
     setScannedItem(item);
     setScannedCode(code);
+    // Clear any existing receipt data
+    setScannedReceipt(null);
+    setTransactionId('');
+  };
+
+  const handleReceiptScanned = (receiptData: any, txId: string) => {
+    setScannedReceipt(receiptData);
+    setTransactionId(txId);
+    // Clear any existing item data
+    setScannedItem(null);
+    setScannedCode('');
   };
 
   const handleDialogClose = () => {
     setScannedItem(null);
     setScannedCode('');
+    setScannedReceipt(null);
+    setTransactionId('');
+  };
+
+  const handleSaveReceipt = (receipt: any) => {
+    // Handle saving receipt to local storage or database
+    console.log('Saving receipt:', receipt);
+    // You can implement receipt saving logic here
   };
 
   const showInfoDialog = () => {
@@ -84,7 +106,10 @@ export default function ScannerScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ScannerView onItemScanned={handleItemScanned} />
+      <ScannerView 
+        onItemScanned={handleItemScanned} 
+        onReceiptScanned={handleReceiptScanned}
+      />
       
       {/* Floating Action Button */}
       <Animated.View 
@@ -132,7 +157,6 @@ export default function ScannerScreen() {
               • Point your camera at a QR code or barcode{'\n'}
               • Keep the code within the frame{'\n'}
               • Wait for automatic detection{'\n'}
-              • Choose whether to add items to your cart
             </Text>
             
             <TouchableOpacity 
@@ -151,6 +175,14 @@ export default function ScannerScreen() {
           item={scannedItem}
           code={scannedCode}
           onClose={handleDialogClose}
+        />
+      )}
+
+      {scannedReceipt && (
+        <ScannedReceiptDialog
+          receiptData={scannedReceipt}
+          onClose={handleDialogClose}
+          onSaveReceipt={handleSaveReceipt}
         />
       )}
     </SafeAreaView>
