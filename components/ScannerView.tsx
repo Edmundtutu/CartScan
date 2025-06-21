@@ -4,7 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Pla
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import { FlashlightOff as FlashOff, Slash as FlashOn } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
-import { fetchItemByCode, fetchReceiptByTransactionId } from '@/services/api';
+import { fetchServerItemBySerial, fetchReceiptByTransactionId } from '@/services/api';
 import { Product } from '@/types';
 
 interface ScannerViewProps {
@@ -124,15 +124,26 @@ export default function ScannerView({ onItemScanned, onReceiptScanned }: Scanner
           );
         }
       } else {
-        // Handle as product code (existing logic)
-        const product = await fetchItemByCode(data);
+        // Handle as product code (server lookup)
+        const product = await fetchServerItemBySerial(data);
         
         if (product) {
           // Trigger haptic feedback on successful scan
           triggerHapticFeedback();
           
-          // Call the callback with the scanned item
-          onItemScanned?.(product, data);
+          // Use a placeholder image if none is provided or if the image is empty
+          const placeholderImage = require('../assets/images/product.png');
+          let imageSource: any = placeholderImage;
+          if (product.image && typeof product.image === 'string' && product.image.trim() !== '') {
+            imageSource = { uri: product.image };
+          }
+          // Call the callback with the scanned item (adapted to Product type)
+          onItemScanned?.({
+            name: product.name,
+            price: parseFloat(product.price),
+            serial: String(product.serial_no),
+            image: imageSource,
+          }, String(product.serial_no));
         } else {
           Alert.alert(
             `Serial: ${data}`,

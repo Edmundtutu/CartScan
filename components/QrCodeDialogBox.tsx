@@ -13,7 +13,7 @@ import QRCode from 'react-native-qrcode-svg';
 
 const { width } = Dimensions.get('window');
 
-interface ReceiptData {
+export interface ReceiptData {
   transactionId: string;
   amount: number;
   currency: string;
@@ -26,7 +26,6 @@ interface ReceiptData {
     price: number;
   }>;
   paymentMethod: string;
-  
 }
 
 interface QrCodeDialogBoxProps {
@@ -37,7 +36,7 @@ interface QrCodeDialogBoxProps {
 
 const QrCodeDialogBox = ({ visible, onClose, receiptData }: QrCodeDialogBoxProps) => {
   // Generate URL for receipt retrieval
-  const receiptQRData = `http://localhost/swftmomo/api/receipts?txd=${receiptData.transactionId}`;
+  const receiptQRData = `https://b067-129-205-3-100.ngrok-free.app/api/v1/transactions/${receiptData.transactionId}`;
 
   const handleShare = async () => {
     try {

@@ -70,7 +70,7 @@ export default function ScannedItemDialog({ item, code, onClose }: ScannedItemDi
           <View style={styles.content}>
             <View style={styles.imageContainer}>
               <Image 
-                source={{ uri: item.image }} 
+                source={typeof item.image === 'string' ? { uri: item.image } : item.image} 
                 style={styles.image}
                 resizeMode="cover"
               />

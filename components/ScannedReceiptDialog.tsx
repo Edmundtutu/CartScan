@@ -18,7 +18,7 @@ interface ReceiptData {
   itemCount: number;
   date: string;
   storeName?: string;
-  paymentMethod?: string;
+  paymentReference?: string;
   items?: Array<{
     name: string;
     quantity: number;
@@ -136,15 +136,15 @@ export default function ScannedReceiptDialog({
                   </View>
                 )}
 
-                {/* Payment Method */}
-                {receiptData.paymentMethod && (
+                {/* Payment Momo reference */}
+                {receiptData.paymentReference && (
                   <View style={styles.detailRow}>
                     <View style={styles.detailIcon}>
                       <CreditCard size={16} color="#666" />
                     </View>
                     <View style={styles.detailContent}>
                       <Text style={styles.detailLabel}>Payment Method</Text>
-                      <Text style={styles.detailValue}>{receiptData.paymentMethod}</Text>
+                      <Text style={styles.detailValue}>{receiptData.paymentReference}</Text>
                     </View>
                   </View>
                 )}

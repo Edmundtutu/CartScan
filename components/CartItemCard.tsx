@@ -125,7 +125,7 @@ export default function CartItemCard({ item }: CartItemCardProps) {
           {/* Product Image Section */}
           <View style={styles.imageContainer}>
             <Image 
-              source={{ uri: item.image }} 
+              source={typeof item.image === 'string' ? { uri: item.image } : item.image} 
               style={styles.image}
               resizeMode="cover"
             />

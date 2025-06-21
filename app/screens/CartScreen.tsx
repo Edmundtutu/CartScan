@@ -14,11 +14,15 @@ import CartItemCard from '@/components/CartItemCard';
 import QrCodeDialogBox from '@/components/QrCodeDialogBox';
 import { useCart } from '@/context/CartContext';
 import { CartItem } from '@/types';
+import { processCheckOut } from '@/services/api';
+import { ReceiptData } from '@/components/QrCodeDialogBox';
 
 export default function CartScreen() {
   const { state, dispatch, totalItems } = useCart();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   // Scroll-aware UI state
   const [isScrolling, setIsScrolling] = useState(false);
@@ -51,7 +55,7 @@ export default function CartScreen() {
     );
   };
 
-  const handleCheckout = () => {
+  const handleCheckout = async () => {
     if (state.items.length === 0) {
       Alert.alert(
         'Empty Cart',
@@ -60,8 +64,33 @@ export default function CartScreen() {
       );
       return;
     }
-
-    setShowReceipt(true);
+    setIsProcessing(true);
+    try {
+      const transaction = await processCheckOut(state, '076397782'); // customer number will have to be dynamic
+      setReceiptData({
+        transactionId: transaction.txd,
+        amount: parseFloat(transaction.total_amount),
+        currency: 'UGX',
+        merchantName: 'Fresco Supermarket',
+        date: transaction.timestamp ? new Date(transaction.timestamp).toLocaleDateString() : '',
+        time: transaction.timestamp ? new Date(transaction.timestamp).toLocaleTimeString() : '',
+        items: transaction.items.map((item: any) => ({
+          name: item.item.name,
+          quantity: item.quantity,
+          price: parseFloat(item.unit_price)
+        })),
+        paymentMethod: transaction.payment_reference || 'Mobile Money'
+      });
+      setShowReceipt(true);
+      dispatch({ type: 'CLEAR_CART' });
+    } catch (error) {
+      // Error handling logs for debugging
+      console.error('Checkout Failed:', error);
+      console.log('Cart state at error:', state);
+      Alert.alert('Checkout Failed', 'Could not complete checkout. Please try again.');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const renderCartItem = ({ item, index }: { item: CartItem; index: number }) => (
@@ -213,27 +242,28 @@ export default function CartScreen() {
           {renderHeader()}
           {renderScrollIndicator()}
 
-          <QrCodeDialogBox
-            visible={showReceipt}
-            onClose={() => {
-              setShowReceipt(false);
-              dispatch({ type: 'CLEAR_CART' });
-            }}
-            receiptData={{
-              transactionId: `TXN${Date.now()}`,
-              amount: state.total,
-              currency: 'UGX',
-              merchantName: 'Fresco Supermarket',
-              date: new Date().toLocaleDateString(),
-              time: new Date().toLocaleTimeString(),
-              items: state.items.map(item => ({
-                name: item.name,
-                quantity: item.quantity,
-                price: item.price
-              })),
-              paymentMethod: 'Mobile Money'
-            }}
-          />
+          {/* Loading indicator for checkout */}
+          {isProcessing && (
+            <View style={{
+              position: 'absolute',
+              top: 0, left: 0, right: 0, bottom: 0,
+              backgroundColor: 'rgba(0,0,0,0.2)',
+              justifyContent: 'center', alignItems: 'center', zIndex: 9999
+            }}>
+              <Text style={{ color: '#007AFF', fontSize: 18, fontWeight: 'bold' }}>Processing Checkout...</Text>
+            </View>
+          )}
+
+          {receiptData && (
+            <QrCodeDialogBox
+              visible={showReceipt}
+              onClose={() => {
+                setShowReceipt(false);
+                setReceiptData(null);
+              }}
+              receiptData={receiptData}
+            />
+          )}
         </>
       )}
     </SafeAreaView>
