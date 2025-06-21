@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, SafeAreaView, Animated } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, SafeAreaView, Animated, Alert } from 'react-native';
 import { Info } from 'lucide-react-native';
 import ScannerView from '@/components/ScannerView';
 import ScannedItemDialog from '@/components/ScannedItemDialog';
 import ScannedReceiptDialog from '@/components/ScannedReceiptDialog';
+import { receiptStorage } from '@/helpers/receiptStorageHelper';
 import { Product } from '@/types';
 
 export default function ScannerScreen() {
@@ -41,10 +42,17 @@ export default function ScannerScreen() {
     setTransactionId('');
   };
 
-  const handleSaveReceipt = (receipt: any) => {
-    // Handle saving receipt to local storage or database
-    console.log('Saving receipt:', receipt);
-    // You can implement receipt saving logic here
+  const handleSaveReceipt = async (receipt: any) => {
+    try {
+      const result = await receiptStorage.saveReceipt(receipt);
+      if (result.success) {
+        Alert.alert('Success', 'Receipt saved successfully!');
+      } else {
+        Alert.alert('Error', `Failed to save receipt: ${result.error}`);
+      }
+    } catch (error) {
+      Alert.alert('Error', `Unexpected error: ${error}`);
+    }
   };
 
   const showInfoDialog = () => {

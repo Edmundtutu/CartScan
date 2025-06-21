@@ -1,7 +1,7 @@
 # dependencies
 node_modules/
 # Helpers
-helpers/
+helpers/UploadToAWsBucket.js
 
 # expo
 .expo/
