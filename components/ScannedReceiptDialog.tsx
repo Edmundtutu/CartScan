@@ -1,6 +1,7 @@
 import React from 'react';
 import {
   View,
+  Image,
   Text,
   StyleSheet,
   TouchableOpacity,
@@ -9,7 +10,7 @@ import {
   Platform,
   ScrollView,
 } from 'react-native';
-import { Receipt, X, Calendar, Hash, ShoppingBag, CreditCard } from 'lucide-react-native';
+import { X, Calendar, Hash, ShoppingBag, CreditCard } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 
 interface ReceiptData {
@@ -95,7 +96,11 @@ export default function ScannedReceiptDialog({
           >
             <View style={styles.content}>
               <View style={styles.iconContainer}>
-                <Receipt size={48} color="#007AFF" />
+                <Image
+                    source={require('../assets/images/receipt.png')} 
+                    style={styles.receiptIcon}
+                    resizeMode="contain"
+                />
               </View>
 
               <Text style={styles.title}>Receipt Scanned</Text>
@@ -143,7 +148,7 @@ export default function ScannedReceiptDialog({
                       <CreditCard size={16} color="#666" />
                     </View>
                     <View style={styles.detailContent}>
-                      <Text style={styles.detailLabel}>Payment Method</Text>
+                      <Text style={styles.detailLabel}>Payment</Text>
                       <Text style={styles.detailValue}>{receiptData.paymentReference}</Text>
                     </View>
                   </View>
@@ -207,7 +212,6 @@ export default function ScannedReceiptDialog({
                   onPress={handleSaveReceipt}
                   activeOpacity={0.8}
                 >
-                  <Receipt size={18} color="white" />
                   <Text style={styles.saveButtonText}>
                     Save Receipt
                   </Text>
@@ -268,6 +272,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
+  },
+  receiptIcon: {
+    width: 48,
+    height: 48,
+    tintColor: '#007AFF', 
   },
   title: {
     fontSize: 22,

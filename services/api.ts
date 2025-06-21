@@ -1,6 +1,7 @@
 import { Product } from '@/types';
 import { getItemBySerial } from './firebase';
 import { createTransaction } from '@/api';
+import { getApiConfig } from '@/config/api';
 
 // Updated to use Firebase instead of mock data
 export async function fetchItemByCode(code: string): Promise<Product | null> {
@@ -16,7 +17,8 @@ export async function fetchItemByCode(code: string): Promise<Product | null> {
 // Function to fetch receipt data from server
 export async function fetchReceiptByTransactionId(transactionId: string): Promise<any | null> {
   try {
-    const response = await fetch(`https://8401-129-205-3-103.ngrok-free.app/api/v1/transactions/${transactionId}`);
+    const apiConfig = getApiConfig();
+    const response = await fetch(apiConfig.getTransactionUrl(transactionId));
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
@@ -57,8 +59,6 @@ export async function processCheckOut(cart: any, customerNumber = '0763977921') 
       unit_price: item.price
     }))
   };
-
-  console.log('Payload being sent to backend:', payload);
 
   try {
     const result = await createTransaction(payload);
@@ -110,7 +110,8 @@ export function getRandomProduct(): Product {  const mockProducts: Product[] = [
 // Fetch item from the new server by serial number
 export async function fetchServerItemBySerial(serial: string | number): Promise<any | null> {
   try {
-    const response = await fetch(`https://8401-129-205-3-103.ngrok-free.app/api/v1/items/${serial}`);
+    const apiConfig = getApiConfig();
+    const response = await fetch(apiConfig.getItemUrl(serial));
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }

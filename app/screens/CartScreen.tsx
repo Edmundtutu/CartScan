@@ -67,7 +67,8 @@ export default function CartScreen() {
     setIsProcessing(true);
     try {
       const transaction = await processCheckOut(state, '076397782'); // customer number will have to be dynamic
-      setReceiptData({
+      
+      const receiptDataObj = {
         transactionId: transaction.txd,
         amount: parseFloat(transaction.total_amount),
         currency: 'UGX',
@@ -80,13 +81,12 @@ export default function CartScreen() {
           price: parseFloat(item.unit_price)
         })),
         paymentMethod: transaction.payment_reference || 'Mobile Money'
-      });
+      };
+      
+      setReceiptData(receiptDataObj);
       setShowReceipt(true);
-      dispatch({ type: 'CLEAR_CART' });
     } catch (error) {
-      // Error handling logs for debugging
       console.error('Checkout Failed:', error);
-      console.log('Cart state at error:', state);
       Alert.alert('Checkout Failed', 'Could not complete checkout. Please try again.');
     } finally {
       setIsProcessing(false);
@@ -260,6 +260,7 @@ export default function CartScreen() {
               onClose={() => {
                 setShowReceipt(false);
                 setReceiptData(null);
+                dispatch({ type: 'CLEAR_CART' });
               }}
               receiptData={receiptData}
             />

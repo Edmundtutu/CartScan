@@ -6,6 +6,7 @@ import { FlashlightOff as FlashOff, Slash as FlashOn } from 'lucide-react-native
 import * as Haptics from 'expo-haptics';
 import { fetchServerItemBySerial, fetchReceiptByTransactionId } from '@/services/api';
 import { Product } from '@/types';
+import { getApiConfig } from '@/config/api';
 
 interface ScannerViewProps {
   onItemScanned?: (item: Product, code: string) => void;
@@ -60,9 +61,10 @@ export default function ScannerView({ onItemScanned, onReceiptScanned }: Scanner
   const isReceiptUrl = (data: string): boolean => {
     try {
       const url = new URL(data);
-      return url.hostname === 'localhost' && 
-             url.pathname.includes('/swftmomo/api/receipts') && 
-             url.searchParams.has('txd');
+      const apiConfig = getApiConfig();
+      const baseUrl = new URL(apiConfig.API_SERVER_BASE_URL);
+      return url.hostname === baseUrl.hostname &&
+             url.pathname.includes('/api/v1/transactions')
     } catch {
       return false;
     }
@@ -72,8 +74,16 @@ export default function ScannerView({ onItemScanned, onReceiptScanned }: Scanner
   const extractTransactionId = (url: string): string | null => {
     try {
       const urlObj = new URL(url);
-      return urlObj.searchParams.get('txd');
-    } catch {
+      // Extract transaction ID from the path: /api/v1/transactions/TXD1750486067355
+      const pathSegments = urlObj.pathname.split('/');
+      const transactionId = pathSegments[pathSegments.length - 1]; // Get the last segment
+      
+      // Validate that it looks like a transaction ID (starts with TXD)
+      if (transactionId && transactionId.startsWith('TXD')) {
+        return transactionId;
+      }
+      return null;
+    } catch (error) {
       return null;
     }
   };

@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import QRCode from 'react-native-qrcode-svg';
+import { getApiConfig } from '@/config/api';
 
 const { width } = Dimensions.get('window');
 
@@ -36,7 +37,8 @@ interface QrCodeDialogBoxProps {
 
 const QrCodeDialogBox = ({ visible, onClose, receiptData }: QrCodeDialogBoxProps) => {
   // Generate URL for receipt retrieval
-  const receiptQRData = `https://b067-129-205-3-100.ngrok-free.app/api/v1/transactions/${receiptData.transactionId}`;
+  const apiConfig = getApiConfig();
+  const receiptQRData = apiConfig.getTransactionUrl(receiptData.transactionId);
 
   const handleShare = async () => {
     try {
