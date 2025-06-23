@@ -31,7 +31,7 @@ import { saveItem, getAllItems } from '@/services/firebase';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 // import { uploadImageToS3 } from '@/helpers/UploadToAWsBucket.js';
-import { BarCodeScanner, BarCodeScannerResult } from 'expo-barcode-scanner';
+import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 
 const { width } = Dimensions.get('window');
 
@@ -69,7 +69,7 @@ export default function AddItemScreen(): JSX.Element {
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [showScanner, setShowScanner] = useState<boolean>(false);
-  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [permission, requestPermission] = useCameraPermissions();
   const [focusedField, setFocusedField] = useState<FocusableField>(null);
 
   const handleInputChange = (field: keyof FormData, value: string): void => {
@@ -183,36 +183,32 @@ export default function AddItemScreen(): JSX.Element {
 
   const handleImageUpload = async (imageUri: string): Promise<void> => {
     setIsUploading(true);
-    Alert.alert('Success', 'Image uploaded successfully to AWS S3!');
-    
-  //   try {
-  //     const result = await uploadImageToS3(imageUri);
-      
-  //     if (result.success) {
-  //       setFormData(prev => ({
-  //         ...prev,
-  //         image: result.url,
-  //       }));
-  //       Alert.alert('Success', 'Image uploaded successfully to AWS S3!');
-  //     } else {
-  //       throw new Error('Upload failed');
-  //     }
-  //   } catch (error) {
-  //     console.error('Error uploading image:', error);
-  //     Alert.alert('Error', 'Failed to upload image to AWS S3. Please try again.');
-  //     setCapturedImage(null);
-  //   } finally {
-  //     setIsUploading(false);
-  //   }
+    try {
+      // For now, just set the local URI as the image
+      // The AWS S3 upload functionality is commented out intentionally
+      setFormData(prev => ({
+        ...prev,
+        image: imageUri,
+      }));
+      Alert.alert('Success', 'Image captured successfully!');
+    } catch (error) {
+      console.error('Error handling image:', error);
+      Alert.alert('Error', 'Failed to process image. Please try again.');
+      setCapturedImage(null);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const requestCameraPermission = async (): Promise<boolean> => {
-    const { status } = await BarCodeScanner.requestPermissionsAsync();
-    setHasPermission(status === 'granted');
-    return status === 'granted';
+    if (!permission) {
+      const { status } = await requestPermission();
+      return status === 'granted';
+    }
+    return permission.granted;
   };
 
-  const handleBarCodeScanned = ({ type, data }: BarCodeScannerResult): void => {
+  const handleBarCodeScanned = ({ type, data }: BarcodeScanningResult): void => {
     setShowScanner(false);
     setFormData(prev => ({
       ...prev,
@@ -222,12 +218,10 @@ export default function AddItemScreen(): JSX.Element {
   };
 
   const toggleScanner = async (): Promise<void> => {
+    const hasPermission = await requestCameraPermission();
     if (!hasPermission) {
-      const granted = await requestCameraPermission();
-      if (!granted) {
-        Alert.alert('Permission Required', 'Camera permission is required to scan barcodes.');
-        return;
-      }
+      Alert.alert('Permission Required', 'Camera permission is required to scan barcodes.');
+      return;
     }
     setShowScanner(!showScanner);
   };
@@ -257,8 +251,11 @@ export default function AddItemScreen(): JSX.Element {
   if (showScanner) {
     return (
       <View style={styles.scannerContainer}>
-        <BarCodeScanner
-          onBarCodeScanned={handleBarCodeScanned}
+        <CameraView
+          onBarcodeScanned={handleBarCodeScanned}
+          barcodeScannerSettings={{
+            barcodeTypes: ['qr', 'ean13', 'ean8', 'code128'],
+          }}
           style={StyleSheet.absoluteFillObject}
         />
         <View style={styles.scannerOverlay}>
@@ -804,4 +801,4 @@ const styles = StyleSheet.create({
     marginTop: 24,
     paddingHorizontal: 40,
   },
-})
+});
