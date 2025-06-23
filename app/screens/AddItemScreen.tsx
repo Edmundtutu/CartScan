@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,8 @@ import {
   Platform,
   Image,
   Dimensions,
+  Animated,
+  BackHandler,
 } from 'react-native';
 import { 
   Package, 
@@ -33,8 +35,15 @@ import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { uploadImageToS3 } from '@/helpers/UploadToAWsBucket.js';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
+import IdentificationStep from '@/components/IdentificationStep';
+import DetailsStep from '@/components/DetailsStep';
+import ImageStep from '@/components/ImageStep';
+import ReviewStep from '@/components/ReviewStep';
+import { router } from 'expo-router';
 
-const { width } = Dimensions.get('window');
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const STEPS = ['Identification', 'Details', 'Image', 'Review'];
 
 interface FormData {
   name: string;
@@ -57,7 +66,9 @@ interface DatabaseItem {
   name: string;
 }
 
-export default function AddItemScreen(): JSX.Element {
+export default function AddItemScreen() {
+  const [selectedAction, setSelectedAction] = useState<'add' | 'bulk' | 'view' | null>(null);
+  const [step, setStep] = useState(0);
   const [formData, setFormData] = useState<FormData>({
     name: '',
     price: '',
@@ -70,6 +81,8 @@ export default function AddItemScreen(): JSX.Element {
   const [showScanner, setShowScanner] = useState<boolean>(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [focusedField, setFocusedField] = useState<FocusableField>(null);
+  const [errors, setErrors] = useState<any>({});
+  const scrollViewRef = useRef<ScrollView>(null);
 
   const handleInputChange = (field: keyof FormData, value: string): void => {
     setFormData(prev => ({
@@ -78,23 +91,47 @@ export default function AddItemScreen(): JSX.Element {
     }));
   };
 
-  const validateForm = (): boolean => {
-    const errors: string[] = [];
-    if (!formData.serial.trim()) errors.push('Serial Number is required');
-    if (!formData.name.trim()) errors.push('Product Name is required');
-    if (!formData.price.trim() || isNaN(parseFloat(formData.price))) errors.push('Valid Price is required');
-    if (!formData.image.trim()) errors.push('Image URL is required');
-    
-    if (errors.length > 0) {
-      Alert.alert('Validation Error', errors.join('\n'));
-      return false;
+  const validateStep = (currentStep = step) => {
+    let stepErrors: any = {};
+    if (currentStep === 0) {
+      if (!formData.serial.trim()) stepErrors.serial = 'Serial Number is required';
     }
-    return true;
+    if (currentStep === 1) {
+      if (!formData.name.trim()) stepErrors.name = 'Product Name is required';
+      if (!formData.price.trim() || isNaN(parseFloat(formData.price))) stepErrors.price = 'Valid Price is required';
+    }
+    if (currentStep === 2) {
+      if (!formData.image.trim()) stepErrors.image = 'Image URL is required';
+    }
+    setErrors(stepErrors);
+    return Object.keys(stepErrors).length === 0;
+  };
+
+  const goNext = () => {
+    if (validateStep(step)) {
+      const nextStep = Math.min(step + 1, STEPS.length - 1);
+      setStep(nextStep);
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ x: nextStep * SCREEN_WIDTH, animated: true });
+      }, 10);
+    }
+  };
+  const goBack = () => {
+    const prevStep = Math.max(step - 1, 0);
+    setStep(prevStep);
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ x: prevStep * SCREEN_WIDTH, animated: true });
+    }, 10);
+  };
+  const goToStep = (idx: number) => {
+    setStep(idx);
+    setTimeout(() => {
+      scrollViewRef.current?.scrollTo({ x: idx * SCREEN_WIDTH, animated: true });
+    }, 10);
   };
 
   const handleSubmit = async (): Promise<void> => {
-    if (!validateForm()) return;
-
+    if (!validateStep(2)) return;
     setIsLoading(true);
     try {
       const itemData: ItemData = {
@@ -120,11 +157,17 @@ export default function AddItemScreen(): JSX.Element {
                 serial: '',
               });
               setCapturedImage(null);
+              setStep(0);
+              setSelectedAction('add');
+              setTimeout(() => {
+                scrollViewRef.current?.scrollTo({ x: 0, animated: false });
+              }, 10);
             },
           },
           {
             text: 'Done',
             style: 'default',
+            onPress: () => setSelectedAction(null),
           },
         ]
       );
@@ -214,13 +257,15 @@ export default function AddItemScreen(): JSX.Element {
     return permission.granted;
   };
 
-  const handleBarCodeScanned = ({ type, data }: BarcodeScanningResult): void => {
+  const handleBarCodeScanned = ({ data }: BarcodeScanningResult): void => {
     setShowScanner(false);
     setFormData(prev => ({
       ...prev,
-      serialNumber: data,
+      serial: data,
     }));
-    Alert.alert('Success', `Serial number scanned: ${data}`);
+    setTimeout(() => {
+      goToStep(0);
+    }, 10);
   };
 
   const toggleScanner = async (): Promise<void> => {
@@ -254,6 +299,60 @@ export default function AddItemScreen(): JSX.Element {
     }
   };
 
+  const stepComponents = [
+    <IdentificationStep
+      key="identification"
+      value={formData.serial}
+      onChange={val => handleInputChange('serial', val)}
+      onScan={toggleScanner}
+      error={errors.serial}
+    />,
+    <DetailsStep
+      key="details"
+      name={formData.name}
+      price={formData.price}
+      onChange={handleInputChange}
+      errors={{ name: errors.name, price: errors.price }}
+    />,
+    <ImageStep
+      key="image"
+      imageUrl={formData.image}
+      onImageUrlChange={val => handleInputChange('image', val)}
+      onCapture={handleImageCapture}
+      capturedImage={capturedImage}
+      onRemoveImage={() => {
+        setCapturedImage(null);
+        setFormData(prev => ({ ...prev, image: '' }));
+      }}
+      isUploading={isUploading}
+      error={errors.image}
+    />,
+    <ReviewStep
+      key="review"
+      name={formData.name}
+      price={formData.price}
+      serial={formData.serial}
+      image={formData.image}
+      onEdit={goToStep}
+      onSave={handleSubmit}
+      isLoading={isLoading}
+      error={errors.submit}
+    />,
+  ];
+
+  useEffect(() => {
+    if (!selectedAction) return;
+    const onBackPress = () => {
+      if (selectedAction === 'add') {
+        setSelectedAction(null);
+        return true;
+      }
+      return false;
+    };
+    const subscription = BackHandler.addEventListener('hardwareBackPress', onBackPress);
+    return () => subscription.remove();
+  }, [selectedAction]);
+
   if (showScanner) {
     return (
       <View style={styles.scannerContainer}>
@@ -283,204 +382,71 @@ export default function AddItemScreen(): JSX.Element {
     );
   }
 
+  if (!selectedAction) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.cardSelectionContainer}>
+          <Text style={styles.cardSelectionTitle}>What would you like to do?</Text>
+          <View style={styles.cardSelectionRow}>
+            <TouchableOpacity style={styles.cardButton} onPress={() => setSelectedAction('add')}>
+              <Plus size={32} color="#4A90E2" />
+              <Text style={styles.cardButtonText}>Add Item</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cardButton} onPress={handleBulkUpload}>
+              <FileSpreadsheet size={32} color="#4A90E2" />
+              <Text style={styles.cardButtonText}>Bulk Add</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.cardButton} onPress={handleViewItems}>
+              <Eye size={32} color="#4A90E2" />
+              <Text style={styles.cardButtonText}>View All</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView 
-        style={styles.keyboardAvoid}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
+        <View style={styles.stepperHeader}>
+          {STEPS.map((label, idx) => (
+            <View key={label} style={styles.stepIndicatorContainer}>
+              <View style={[styles.stepCircle, step === idx && styles.stepCircleActive]} />
+              {idx < STEPS.length - 1 && <View style={styles.stepLine} />}
+            </View>
+          ))}
+        </View>
+        <ScrollView
+          ref={scrollViewRef}
+          horizontal
+          pagingEnabled
+          scrollEnabled={false}
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ flexGrow: 1 }}
+          style={{ flex: 1 }}
         >
-          <View style={styles.formContainer}>
-            {/* Serial Number Input with Scanner */}
-            <View style={styles.inputSection}>
-              <Text style={styles.sectionTitle}>Item Identity</Text>
-              
-              <View style={styles.inputGroup}>
-                <View style={styles.labelContainer}>
-                  <Tally4 size={18} color="#4A90E2" />
-                  <Text style={styles.inputLabel}>Serial Number</Text>
-                </View>
-                <View style={styles.inputWithAction}>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      styles.inputWithButton,
-                      focusedField === 'serial' && styles.inputFocused
-                    ]}
-                    placeholder="Enter or scan serial number"
-                    value={formData.serial}
-                    onChangeText={(value) => handleInputChange('serial', value)}
-                    onFocus={() => setFocusedField('serial')}
-                    onBlur={() => setFocusedField(null)}
-                    autoCapitalize="none"
-                  />
-                  <TouchableOpacity
-                    style={styles.scanButton}
-                    onPress={toggleScanner}
-                    activeOpacity={0.7}
-                  >
-                    <QrCode size={20} color="#4A90E2" />
-                  </TouchableOpacity>
-                </View>
-              </View>
+          {stepComponents.map((Component, idx) => (
+            <View key={idx} style={{ width: SCREEN_WIDTH, flex: 1, justifyContent: 'center' }}>
+              {Component}
             </View>
-
-            {/*Item  Details */}
-            <View style={styles.inputSection}>
-              <Text style={styles.sectionTitle}>Details</Text>
-              
-              <View style={styles.inputGroup}>
-                <View style={styles.labelContainer}>
-                  <Package size={18} color="#50C878" />
-                  <Text style={styles.inputLabel}>Item Name</Text>
-                </View>
-                <TextInput
-                  style={[
-                    styles.input,
-                    focusedField === 'name' && styles.inputFocused
-                  ]}
-                  placeholder="Enter product name"
-                  value={formData.name}
-                  onChangeText={(value) => handleInputChange('name', value)}
-                  onFocus={() => setFocusedField('name')}
-                  onBlur={() => setFocusedField(null)}
-                />
-              </View>
-
-              <View style={styles.inputGroup}>
-                <View style={styles.labelContainer}>
-                  <DollarSign size={18} color="#FF6B6B" />
-                  <Text style={styles.inputLabel}>Price (UGX)</Text>
-                </View>
-                <TextInput
-                  style={[
-                    styles.input,
-                    focusedField === 'price' && styles.inputFocused
-                  ]}
-                  placeholder="Enter price"
-                  value={formData.price}
-                  onChangeText={(value) => handleInputChange('price', value)}
-                  onFocus={() => setFocusedField('price')}
-                  onBlur={() => setFocusedField(null)}
-                  keyboardType="decimal-pad"
-                />
-              </View>
-            </View>
-
-            {/* Image Section */}
-            <View style={styles.inputSection}>
-              <Text style={styles.sectionTitle}>Image</Text>
-              
-              <View style={styles.imageSection}>
-                <View style={styles.imageActions}>
-                  <TouchableOpacity
-                    style={styles.imageActionButton}
-                    onPress={handleImageCapture}
-                    disabled={isUploading}
-                    activeOpacity={0.7}
-                  >
-                    {isUploading ? (
-                      <ActivityIndicator size="small" color="#4A90E2" />
-                    ) : (
-                      <>
-                        <Camera size={20} color="#4A90E2" />
-                        <Text style={styles.imageActionText}>Take Photo</Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
-                </View>
-
-                <View style={styles.dividerContainer}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerText}>OR</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-
-                <View style={styles.inputGroup}>
-                  <View style={styles.labelContainer}>
-                    <ImageIcon size={18} color="#9B59B6" />
-                    <Text style={styles.inputLabel}>Image URL</Text>
-                  </View>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      focusedField === 'image' && styles.inputFocused
-                    ]}
-                    placeholder="Paste image URL here"
-                    value={formData.image}
-                    onChangeText={(value) => handleInputChange('image', value)}
-                    onFocus={() => setFocusedField('image')}
-                    onBlur={() => setFocusedField(null)}
-                    autoCapitalize="none"
-                    keyboardType="url"
-                  />
-                </View>
-
-                {capturedImage && (
-                  <View style={styles.imagePreviewContainer}>
-                    <Image
-                      source={{ uri: capturedImage }}
-                      style={styles.imagePreview}
-                      resizeMode="cover"
-                    />
-                    <TouchableOpacity
-                      style={styles.removeImageButton}
-                      onPress={() => {
-                        setCapturedImage(null);
-                        setFormData(prev => ({ ...prev, image: '' }));
-                      }}
-                    >
-                      <Text style={styles.removeImageText}>✕</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </View>
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View style={styles.actionContainer}>
-            <TouchableOpacity
-              style={[styles.primaryButton, isLoading && styles.buttonDisabled]}
-              onPress={handleSubmit}
-              disabled={isLoading}
-              activeOpacity={0.8}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <>
-                  <Plus size={20} color="white" />
-                  <Text style={styles.primaryButtonText}>Add Item</Text>
-                </>
-              )}
-            </TouchableOpacity>
-
-            <View style={styles.secondaryActions}>
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={handleBulkUpload}
-                activeOpacity={0.8}
-              >
-                <FileSpreadsheet size={18} color="#4A90E2" />
-                <Text style={styles.secondaryButtonText}>Bulk Upload</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.secondaryButton}
-                onPress={handleViewItems}
-                activeOpacity={0.8}
-              >
-                <Eye size={18} color="#4A90E2" />
-                <Text style={styles.secondaryButtonText}>View All</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          ))}
         </ScrollView>
+        <View style={styles.stepperNav}>
+          {step > 0 && (
+            <TouchableOpacity style={styles.navButton} onPress={goBack}>
+              <Text style={styles.navButtonText}>Back</Text>
+            </TouchableOpacity>
+          )}
+          {step < STEPS.length - 1 && (
+            <TouchableOpacity style={styles.navButton} onPress={goNext}>
+              <Text style={styles.navButtonText}>Next</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -491,214 +457,96 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  keyboardAvoid: {
+  cardSelectionContainer: {
     flex: 1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingBottom: 32,
-  },
-  formContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 24,
-    paddingTop: 24,
   },
-  inputSection: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 20,
+  cardSelectionTitle: {
+    fontSize: 24,
     fontWeight: '700',
     color: '#2D3748',
-    marginBottom: 16,
+    marginBottom: 32,
   },
-  inputGroup: {
-    marginBottom: 20,
-  },
-  labelContainer: {
+  cardSelectionRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'center',
+    gap: 16,
   },
-  inputLabel: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#4A5568',
-    marginLeft: 8,
-  },
-  input: {
+  cardButton: {
     backgroundColor: 'white',
-    borderRadius: 16,
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    fontSize: 16,
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
+    borderRadius: 20,
+    paddingVertical: 32,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 8,
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    minWidth: 110,
   },
-  inputFocused: {
-    borderColor: '#4A90E2',
-    shadowColor: '#4A90E2',
-    shadowOpacity: 0.2,
-  },
-  inputWithAction: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  inputWithButton: {
-    flex: 1,
-    marginRight: 12,
-  },
-  scanButton: {
-    backgroundColor: '#EBF4FF',
-    borderRadius: 16,
-    padding: 16,
-    borderWidth: 2,
-    borderColor: '#4A90E2',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  imageSection: {
-    marginTop: 8,
-  },
-  imageActions: {
-    marginBottom: 20,
-  },
-  imageActionButton: {
-    backgroundColor: '#EBF4FF',
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#4A90E2',
-  },
-  imageActionText: {
+  cardButtonText: {
     color: '#4A90E2',
     fontSize: 16,
     fontWeight: '600',
-    marginLeft: 8,
+    marginTop: 12,
   },
-  dividerContainer: {
+  stepperHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginVertical: 20,
+    justifyContent: 'center',
+    marginTop: 24,
+    marginBottom: 8,
   },
-  dividerLine: {
-    flex: 1,
-    height: 1,
+  stepIndicatorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stepCircle: {
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#E2E8F0',
+    marginHorizontal: 4,
+  },
+  stepCircleActive: {
+    backgroundColor: '#4A90E2',
+  },
+  stepLine: {
+    width: 32,
+    height: 2,
     backgroundColor: '#E2E8F0',
   },
-  dividerText: {
-    fontSize: 14,
-    color: '#94A3B8',
-    fontWeight: '500',
-    paddingHorizontal: 16,
-  },
-  imagePreviewContainer: {
-    marginTop: 16,
-    borderRadius: 16,
-    overflow: 'hidden',
-    position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  imagePreview: {
-    width: '100%',
-    height: 200,
-  },
-  removeImageButton: {
-    position: 'absolute',
-    top: 12,
-    right: 12,
-    backgroundColor: 'rgba(0,0,0,0.6)',
-    borderRadius: 20,
-    width: 32,
-    height: 32,
+  stepperNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 32,
+    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+    paddingTop: 8,
   },
-  removeImageText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  actionContainer: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-  },
-  primaryButton: {
+  navButton: {
     backgroundColor: '#4A90E2',
-    borderRadius: 20,
-    paddingVertical: 18,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 16,
-    shadowColor: '#4A90E2',
-    shadowOffset: {
-      width: 0,
-      height: 6,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  buttonDisabled: {
-    opacity: 0.6,
-  },
-  primaryButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: '700',
-    marginLeft: 8,
-  },
-  secondaryActions: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  secondaryButton: {
-    flex: 1,
-    backgroundColor: 'white',
     borderRadius: 16,
     paddingVertical: 14,
-    flexDirection: 'row',
+    paddingHorizontal: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#E2E8F0',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: '#4A90E2',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 4,
   },
-  secondaryButtonText: {
-    color: '#4A90E2',
-    fontSize: 14,
-    fontWeight: '600',
-    marginLeft: 6,
+  navButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '700',
   },
-  // Scanner styles
   scannerContainer: {
     flex: 1,
     backgroundColor: 'black',
@@ -741,8 +589,8 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   scannerFrame: {
-    width: width * 0.7,
-    height: width * 0.7,
+    width: SCREEN_WIDTH * 0.7,
+    height: SCREEN_WIDTH * 0.7,
     borderWidth: 2,
     borderColor: '#4A90E2',
     borderRadius: 20,
