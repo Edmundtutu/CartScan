@@ -19,6 +19,7 @@ import {
   DollarSign, 
   Image as ImageIcon, 
   Hash, 
+  Tally4,
   Plus, 
   Camera, 
   QrCode,
@@ -30,13 +31,12 @@ import {
 import { saveItem, getAllItems } from '@/services/firebase';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-// import { uploadImageToS3 } from '@/helpers/UploadToAWsBucket.js';
+import { uploadImageToS3 } from '@/helpers/UploadToAWsBucket.js';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 
 const { width } = Dimensions.get('window');
 
 interface FormData {
-  serialNumber: string;
   name: string;
   price: string;
   image: string;
@@ -59,7 +59,6 @@ interface DatabaseItem {
 
 export default function AddItemScreen(): JSX.Element {
   const [formData, setFormData] = useState<FormData>({
-    serialNumber: '',
     name: '',
     price: '',
     image: '',
@@ -81,11 +80,10 @@ export default function AddItemScreen(): JSX.Element {
 
   const validateForm = (): boolean => {
     const errors: string[] = [];
-    if (!formData.serialNumber.trim()) errors.push('Serial Number is required');
+    if (!formData.serial.trim()) errors.push('Serial Number is required');
     if (!formData.name.trim()) errors.push('Product Name is required');
     if (!formData.price.trim() || isNaN(parseFloat(formData.price))) errors.push('Valid Price is required');
     if (!formData.image.trim()) errors.push('Image URL is required');
-    if (!formData.serial.trim()) errors.push('Product Serial is required');
     
     if (errors.length > 0) {
       Alert.alert('Validation Error', errors.join('\n'));
@@ -106,7 +104,7 @@ export default function AddItemScreen(): JSX.Element {
         serial: formData.serial.trim(),
       };
 
-      await saveItem(formData.serialNumber.trim(), itemData);
+      await saveItem(formData.serial.trim(), itemData);
       
       Alert.alert(
         'Success!',
@@ -116,7 +114,6 @@ export default function AddItemScreen(): JSX.Element {
             text: 'Add Another',
             onPress: () => {
               setFormData({
-                serialNumber: '',
                 name: '',
                 price: '',
                 image: '',
@@ -141,7 +138,13 @@ export default function AddItemScreen(): JSX.Element {
 
   const handleViewItems = async (): Promise<void> => {
     try {
-      const items: DatabaseItem[] = await getAllItems();
+      const rawItems = await getAllItems();
+      const items: DatabaseItem[] = rawItems
+        .filter((item: any) => typeof item.id === 'string')
+        .map((item: any) => ({
+          id: item.id as string,
+          name: item.name,
+        }));
       const itemsList = items.map(item => `• ${item.name} (${item.id})`).join('\n');
       
       Alert.alert(
@@ -184,16 +187,19 @@ export default function AddItemScreen(): JSX.Element {
   const handleImageUpload = async (imageUri: string): Promise<void> => {
     setIsUploading(true);
     try {
-      // For now, just set the local URI as the image
-      // The AWS S3 upload functionality is commented out intentionally
-      setFormData(prev => ({
-        ...prev,
-        image: imageUri,
-      }));
-      Alert.alert('Success', 'Image captured successfully!');
+      const result = await uploadImageToS3(imageUri);
+      
+      if (result.success) {
+        setFormData(prev => ({
+          ...prev,
+          image: result.url,
+        }));
+      } else {
+        throw new Error('Upload failed');
+      }
     } catch (error) {
-      console.error('Error handling image:', error);
-      Alert.alert('Error', 'Failed to process image. Please try again.');
+      console.error('Error uploading image:', error);
+      Alert.alert('Error', 'Failed to upload image Please try again.');
       setCapturedImage(null);
     } finally {
       setIsUploading(false);
@@ -288,23 +294,14 @@ export default function AddItemScreen(): JSX.Element {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
-            <View style={styles.titleContainer}>
-              <Text style={styles.title}>Add Product</Text>
-              <Text style={styles.subtitle}>
-                Create new product entries for your inventory
-              </Text>
-            </View>
-          </View>
-
           <View style={styles.formContainer}>
             {/* Serial Number Input with Scanner */}
             <View style={styles.inputSection}>
-              <Text style={styles.sectionTitle}>Product Identification</Text>
+              <Text style={styles.sectionTitle}>Item Identity</Text>
               
               <View style={styles.inputGroup}>
                 <View style={styles.labelContainer}>
-                  <Hash size={18} color="#4A90E2" />
+                  <Tally4 size={18} color="#4A90E2" />
                   <Text style={styles.inputLabel}>Serial Number</Text>
                 </View>
                 <View style={styles.inputWithAction}>
@@ -312,12 +309,12 @@ export default function AddItemScreen(): JSX.Element {
                     style={[
                       styles.input,
                       styles.inputWithButton,
-                      focusedField === 'serialNumber' && styles.inputFocused
+                      focusedField === 'serial' && styles.inputFocused
                     ]}
                     placeholder="Enter or scan serial number"
-                    value={formData.serialNumber}
-                    onChangeText={(value) => handleInputChange('serialNumber', value)}
-                    onFocus={() => setFocusedField('serialNumber')}
+                    value={formData.serial}
+                    onChangeText={(value) => handleInputChange('serial', value)}
+                    onFocus={() => setFocusedField('serial')}
                     onBlur={() => setFocusedField(null)}
                     autoCapitalize="none"
                   />
@@ -330,35 +327,16 @@ export default function AddItemScreen(): JSX.Element {
                   </TouchableOpacity>
                 </View>
               </View>
-
-              <View style={styles.inputGroup}>
-                <View style={styles.labelContainer}>
-                  <Hash size={18} color="#4A90E2" />
-                  <Text style={styles.inputLabel}>Product Serial</Text>
-                </View>
-                <TextInput
-                  style={[
-                    styles.input,
-                    focusedField === 'serial' && styles.inputFocused
-                  ]}
-                  placeholder="Internal product serial"
-                  value={formData.serial}
-                  onChangeText={(value) => handleInputChange('serial', value)}
-                  onFocus={() => setFocusedField('serial')}
-                  onBlur={() => setFocusedField(null)}
-                  autoCapitalize="characters"
-                />
-              </View>
             </View>
 
-            {/* Product Details */}
+            {/*Item  Details */}
             <View style={styles.inputSection}>
-              <Text style={styles.sectionTitle}>Product Details</Text>
+              <Text style={styles.sectionTitle}>Details</Text>
               
               <View style={styles.inputGroup}>
                 <View style={styles.labelContainer}>
                   <Package size={18} color="#50C878" />
-                  <Text style={styles.inputLabel}>Product Name</Text>
+                  <Text style={styles.inputLabel}>Item Name</Text>
                 </View>
                 <TextInput
                   style={[
@@ -395,7 +373,7 @@ export default function AddItemScreen(): JSX.Element {
 
             {/* Image Section */}
             <View style={styles.inputSection}>
-              <Text style={styles.sectionTitle}>Product Image</Text>
+              <Text style={styles.sectionTitle}>Image</Text>
               
               <View style={styles.imageSection}>
                 <View style={styles.imageActions}>
@@ -477,7 +455,7 @@ export default function AddItemScreen(): JSX.Element {
               ) : (
                 <>
                   <Plus size={20} color="white" />
-                  <Text style={styles.primaryButtonText}>Add Product</Text>
+                  <Text style={styles.primaryButtonText}>Add Item</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -521,30 +499,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 32,
-  },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 16,
-    paddingBottom: 24,
-    backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-  },
-  titleContainer: {
-    alignItems: 'center',
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#1A202C',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  subtitle: {
-    fontSize: 16,
-    color: '#64748B',
-    textAlign: 'center',
-    lineHeight: 22,
   },
   formContainer: {
     paddingHorizontal: 24,
