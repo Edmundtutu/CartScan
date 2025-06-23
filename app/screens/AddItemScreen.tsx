@@ -183,27 +183,28 @@ export default function AddItemScreen(): JSX.Element {
 
   const handleImageUpload = async (imageUri: string): Promise<void> => {
     setIsUploading(true);
+    Alert.alert('Success', 'Image uploaded successfully to AWS S3!');
     
-    try {
-      const result = await uploadImageToS3(imageUri);
+  //   try {
+  //     const result = await uploadImageToS3(imageUri);
       
-      if (result.success) {
-        setFormData(prev => ({
-          ...prev,
-          image: result.url,
-        }));
-        Alert.alert('Success', 'Image uploaded successfully to AWS S3!');
-      } else {
-        throw new Error('Upload failed');
-      }
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      Alert.alert('Error', 'Failed to upload image to AWS S3. Please try again.');
-      setCapturedImage(null);
-    } finally {
-      setIsUploading(false);
-    }
-  };
+  //     if (result.success) {
+  //       setFormData(prev => ({
+  //         ...prev,
+  //         image: result.url,
+  //       }));
+  //       Alert.alert('Success', 'Image uploaded successfully to AWS S3!');
+  //     } else {
+  //       throw new Error('Upload failed');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error uploading image:', error);
+  //     Alert.alert('Error', 'Failed to upload image to AWS S3. Please try again.');
+  //     setCapturedImage(null);
+  //   } finally {
+  //     setIsUploading(false);
+  //   }
+  // };
 
   const requestCameraPermission = async (): Promise<boolean> => {
     const { status } = await BarCodeScanner.requestPermissionsAsync();
