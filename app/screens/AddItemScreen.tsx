@@ -30,7 +30,7 @@ import {
 import { saveItem, getAllItems } from '@/services/firebase';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { uploadImageToS3 } from '@/helpers/UploadToAWsBucket.js';
+// import { uploadImageToS3 } from '@/helpers/UploadToAWsBucket.js';
 import { BarCodeScanner, BarCodeScannerResult } from 'expo-barcode-scanner';
 
 const { width } = Dimensions.get('window');
@@ -204,7 +204,7 @@ export default function AddItemScreen(): JSX.Element {
   //   } finally {
   //     setIsUploading(false);
   //   }
-  // };
+  };
 
   const requestCameraPermission = async (): Promise<boolean> => {
     const { status } = await BarCodeScanner.requestPermissionsAsync();
@@ -804,4 +804,4 @@ const styles = StyleSheet.create({
     marginTop: 24,
     paddingHorizontal: 40,
   },
-});
+})
