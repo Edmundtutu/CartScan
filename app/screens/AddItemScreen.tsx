@@ -28,7 +28,9 @@ import {
   Upload,
   FileSpreadsheet,
   Eye,
-  EyeOff
+  EyeOff,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react-native';
 import { saveItem, getAllItems } from '@/services/firebase';
 import * as ImagePicker from 'expo-image-picker';
@@ -41,7 +43,7 @@ import ImageStep from '@/components/ImageStep';
 import ReviewStep from '@/components/ReviewStep';
 import { router } from 'expo-router';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const STEPS = ['Identification', 'Details', 'Image', 'Review'];
 
@@ -387,18 +389,29 @@ export default function AddItemScreen() {
       <SafeAreaView style={styles.container}>
         <View style={styles.cardSelectionContainer}>
           <Text style={styles.cardSelectionTitle}>What would you like to do?</Text>
-          <View style={styles.cardSelectionRow}>
+          <View style={styles.cardSelectionGrid}>
             <TouchableOpacity style={styles.cardButton} onPress={() => setSelectedAction('add')}>
-              <Plus size={32} color="#4A90E2" />
+              <View style={styles.cardIconContainer}>
+                <Plus size={28} color="#4A90E2" />
+              </View>
               <Text style={styles.cardButtonText}>Add Item</Text>
+              <Text style={styles.cardButtonDescription}>Add a single item manually</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity style={styles.cardButton} onPress={handleBulkUpload}>
-              <FileSpreadsheet size={32} color="#4A90E2" />
-              <Text style={styles.cardButtonText}>Bulk Add</Text>
+              <View style={styles.cardIconContainer}>
+                <FileSpreadsheet size={28} color="#4A90E2" />
+              </View>
+              <Text style={styles.cardButtonText}>Bulk Upload</Text>
+              <Text style={styles.cardButtonDescription}>Import multiple items from file</Text>
             </TouchableOpacity>
+            
             <TouchableOpacity style={styles.cardButton} onPress={handleViewItems}>
-              <Eye size={32} color="#4A90E2" />
-              <Text style={styles.cardButtonText}>View All</Text>
+              <View style={styles.cardIconContainer}>
+                <Eye size={28} color="#4A90E2" />
+              </View>
+              <Text style={styles.cardButtonText}>View Items</Text>
+              <Text style={styles.cardButtonDescription}>Browse all saved items</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -412,40 +425,77 @@ export default function AddItemScreen() {
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={styles.stepperHeader}>
-          {STEPS.map((label, idx) => (
-            <View key={label} style={styles.stepIndicatorContainer}>
-              <View style={[styles.stepCircle, step === idx && styles.stepCircleActive]} />
-              {idx < STEPS.length - 1 && <View style={styles.stepLine} />}
+        {/* Content area - takes full screen */}
+        <View style={styles.contentContainer}>
+          <ScrollView
+            ref={scrollViewRef}
+            horizontal
+            pagingEnabled
+            scrollEnabled={false}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ flexDirection: 'row', justifyContent: 'center' }}
+          >
+            {stepComponents.map((Component, idx) => (
+              <ScrollView 
+                key={idx} 
+                style={styles.stepContainer}
+                contentContainerStyle={[styles.stepContentContainer, { justifyContent: 'center' }]}
+                showsVerticalScrollIndicator={false}
+                bounces={false}
+              >
+                {Component}
+              </ScrollView>
+            ))}
+          </ScrollView>
+        </View>
+
+        {/* Step Indicator Overlay */}
+        <View style={styles.stepIndicatorOverlay}>
+          {STEPS.map((_, idx) => (
+            <View key={idx} style={styles.stepIndicatorWrapper}>
+              <View style={[
+                styles.stepIndicator, 
+                idx <= step && styles.stepIndicatorActive
+              ]} />
+              {idx < STEPS.length - 1 && (
+                <View style={[
+                  styles.stepConnector,
+                  idx < step && styles.stepConnectorActive
+                ]} />
+              )}
             </View>
           ))}
         </View>
-        <ScrollView
-          ref={scrollViewRef}
-          horizontal
-          pagingEnabled
-          scrollEnabled={false}
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ flexGrow: 1 }}
-          style={{ flex: 1 }}
-        >
-          {stepComponents.map((Component, idx) => (
-            <View key={idx} style={{ width: SCREEN_WIDTH, flex: 1, justifyContent: 'center' }}>
-              {Component}
-            </View>
-          ))}
-        </ScrollView>
-        <View style={styles.stepperNav}>
-          {step > 0 && (
-            <TouchableOpacity style={styles.navButton} onPress={goBack}>
-              <Text style={styles.navButtonText}>Back</Text>
-            </TouchableOpacity>
-          )}
-          {step < STEPS.length - 1 && (
-            <TouchableOpacity style={styles.navButton} onPress={goNext}>
-              <Text style={styles.navButtonText}>Next</Text>
-            </TouchableOpacity>
-          )}
+
+        {/* Navigation Overlay */}
+        <View style={styles.navigationOverlay}>
+          <TouchableOpacity
+            style={[styles.navArrow, step === 0 && styles.navArrowDisabled]}
+            onPress={goBack}
+            disabled={step === 0}
+          >
+            <ChevronLeft 
+              size={32} 
+              color={step === 0 ? '#CBD5E1' : '#64748B'} 
+            />
+          </TouchableOpacity>
+          
+          <View style={styles.navIndicator}>
+            <Text style={styles.navIndicatorText}>
+              {step + 1} / {STEPS.length}
+            </Text>
+          </View>
+          
+          <TouchableOpacity
+            style={[styles.navArrow, step === STEPS.length - 1 && styles.navArrowDisabled]}
+            onPress={goNext}
+            disabled={step === STEPS.length - 1}
+          >
+            <ChevronRight 
+              size={32} 
+              color={step === STEPS.length - 1 ? '#CBD5E1' : '#64748B'} 
+            />
+          </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -457,96 +507,163 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
+  
+  // Card Selection Screen
   cardSelectionContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
+    paddingTop: 40,
     paddingHorizontal: 24,
   },
   cardSelectionTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: '700',
-    color: '#2D3748',
-    marginBottom: 32,
+    color: '#1E293B',
+    textAlign: 'center',
+    marginBottom: 48,
   },
-  cardSelectionRow: {
-    flexDirection: 'row',
+  cardSelectionGrid: {
+    flex: 1,
     justifyContent: 'center',
-    gap: 16,
+    gap: 20,
   },
   cardButton: {
     backgroundColor: 'white',
-    borderRadius: 20,
-    paddingVertical: 32,
-    paddingHorizontal: 24,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+  },
+  cardIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#F0F9FF',
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: 16,
+  },
+  cardButtonText: {
+    color: '#1E293B',
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  cardButtonDescription: {
+    color: '#64748B',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+
+  // Content
+  contentContainer: {
+    flex: 1,
+    backgroundColor: '#F8FAFC',
+  },
+  stepContainer: {
+    width: SCREEN_WIDTH,
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  stepContentContainer: {
+    flexGrow: 1,
+    paddingBottom: 20,
+  },
+
+  // Step Indicator Overlay
+  stepIndicatorOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingTop: 8,
+    backgroundColor: 'transparent',
+    zIndex: 10,
+  },
+  stepIndicatorWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  stepIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: 'rgba(226, 232, 240, 0.9)',
+  },
+  stepIndicatorActive: {
+    backgroundColor: 'rgba(74, 144, 226, 0.9)',
+  },
+  stepConnector: {
+    width: 60,
+    height: 2,
+    backgroundColor: 'rgba(226, 232, 240, 0.9)',
     marginHorizontal: 8,
+  },
+  stepConnectorActive: {
+    backgroundColor: 'rgba(74, 144, 226, 0.9)',
+  },
+
+  // Navigation Overlay
+  navigationOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 32,
+    paddingVertical: 10,
+    paddingBottom: 4,
+    backgroundColor: 'transparent',
+    zIndex: 10,
+  },
+  navArrow: {
+    width: 40,
+    height: 40,
+    borderRadius: 24,
+    backgroundColor: 'rgba(248, 250, 252, 0.9)',
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
-    minWidth: 110,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  cardButtonText: {
-    color: '#4A90E2',
-    fontSize: 16,
-    fontWeight: '600',
-    marginTop: 12,
+  navArrowDisabled: {
+    backgroundColor: 'rgba(248, 250, 252, 0.5)',
+    opacity: 0.5,
   },
-  stepperHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 24,
-    marginBottom: 8,
-  },
-  stepIndicatorContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  stepCircle: {
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#E2E8F0',
-    marginHorizontal: 4,
-  },
-  stepCircleActive: {
-    backgroundColor: '#4A90E2',
-  },
-  stepLine: {
-    width: 32,
-    height: 2,
-    backgroundColor: '#E2E8F0',
-  },
-  stepperNav: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
-    paddingTop: 8,
-  },
-  navButton: {
-    backgroundColor: '#4A90E2',
+  navIndicator: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(241, 245, 249, 0.9)',
     borderRadius: 16,
-    paddingVertical: 14,
-    paddingHorizontal: 32,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#4A90E2',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
   },
-  navButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '700',
+  navIndicatorText: {
+    fontSize: 14,
+    color: '#64748B',
+    fontWeight: '500',
   },
+
+  // Scanner (keeping original styles)
   scannerContainer: {
     flex: 1,
     backgroundColor: 'black',
