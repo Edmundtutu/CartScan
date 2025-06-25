@@ -318,7 +318,7 @@ export default function AddItemScreen() {
   const handleBulkUpload = async (): Promise<void> => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['text/csv'],
+        type: ['text/csv', 'application/vnd.ms-excel', 'application/csv', 'text/comma-separated-values', 'text/plain'],
         copyToCacheDirectory: true,
       });
       if (!result.canceled && result.assets && result.assets[0]) {
@@ -411,6 +411,43 @@ export default function AddItemScreen() {
     return () => subscription.remove();
   }, [selectedAction]);
 
+  // Uploading overlay for bulk upload
+  const renderUploadingOverlay = () => {
+    if (isLoading && selectedAction === 'bulk') {
+      return (
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.3)',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 100,
+        }}>
+          <View style={{
+            backgroundColor: 'white',
+            borderRadius: 16,
+            padding: 32,
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.15,
+            shadowRadius: 8,
+            elevation: 6,
+          }}>
+            <ActivityIndicator size="large" color="#4A90E2" />
+            <Text style={{ marginTop: 16, fontSize: 16, color: '#1E293B', fontWeight: '600' }}>
+              Uploading items, please wait...
+            </Text>
+          </View>
+        </View>
+      );
+    }
+    return null;
+  };
+
   if (showScanner) {
     return (
       <View style={styles.scannerContainer}>
@@ -476,6 +513,7 @@ export default function AddItemScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {renderUploadingOverlay()}
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

@@ -123,17 +123,41 @@ export async function fetchServerItemBySerial(serial: string | number): Promise<
   }
 }
 
-// Fetch all items from the server
+// Fetch all items from the server (fetches all pages)
 export async function fetchAllServerItems(params: { category?: string; per_page?: number } = {}): Promise<any[]> {
   try {
     const apiConfig = getApiConfig();
-    const url = new URL(apiConfig.ENDPOINTS.ITEMS, apiConfig.API_SERVER_BASE_URL);
-    if (params.category) url.searchParams.append('category', params.category);
-    if (params.per_page) url.searchParams.append('per_page', params.per_page.toString());
-    const response = await fetch(url.toString());
-    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-    const result = await response.json();
-    return result.data || [];
+    /**
+     * const url = new URL(apiConfig.ENDPOINTS.ITEMS, apiConfig.API_SERVER_BASE_URL);
+        if (params.category) url.searchParams.append('category', params.category);
+        if (params.per_page) url.searchParams.append('per_page', params.per_page.toString());
+        const response = await fetch(url.toString());
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        const result = await response.json();
+        return result.data || [];
+     */
+    let allItems: any[] = [];
+    let page = 1;
+    let hasMore = true;
+    const perPage = params.per_page || 100; // fetch 100 per page by default
+    while (hasMore) {
+      const url = new URL(apiConfig.ENDPOINTS.ITEMS, apiConfig.API_SERVER_BASE_URL);
+      if (params.category) url.searchParams.append('category', params.category);
+      url.searchParams.append('per_page', perPage.toString());
+      url.searchParams.append('page', page.toString());
+      const response = await fetch(url.toString());
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+      const result = await response.json();
+      const items = result.data || [];
+      allItems = allItems.concat(items);
+      // Check if there are more pages
+      if (items.length < perPage) {
+        hasMore = false;
+      } else {
+        page++;
+      }
+    }
+    return allItems;
   } catch (error) {
     console.error('Error fetching all items from server:', error);
     return [];
