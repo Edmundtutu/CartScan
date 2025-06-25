@@ -122,3 +122,54 @@ export async function fetchServerItemBySerial(serial: string | number): Promise<
     return null;
   }
 }
+
+// Fetch all items from the server
+export async function fetchAllServerItems(params: { category?: string; per_page?: number } = {}): Promise<any[]> {
+  try {
+    const apiConfig = getApiConfig();
+    const url = new URL(apiConfig.ENDPOINTS.ITEMS, apiConfig.API_SERVER_BASE_URL);
+    if (params.category) url.searchParams.append('category', params.category);
+    if (params.per_page) url.searchParams.append('per_page', params.per_page.toString());
+    const response = await fetch(url.toString());
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    const result = await response.json();
+    return result.data || [];
+  } catch (error) {
+    console.error('Error fetching all items from server:', error);
+    return [];
+  }
+}
+
+// Create a single item on the server
+export async function createServerItem(item: { serial_no: number | string; name: string; category: string; price: number }): Promise<any> {
+  try {
+    const apiConfig = getApiConfig();
+    const response = await fetch(`${apiConfig.API_SERVER_BASE_URL}/${apiConfig.ENDPOINTS.ITEMS}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating item on server:', error);
+    throw error;
+  }
+}
+
+// Bulk create items on the server
+export async function bulkCreateServerItems(items: { serial_no: number | string; name: string; category: string; price: number }[]): Promise<any> {
+  try {
+    const apiConfig = getApiConfig();
+    const response = await fetch(`${apiConfig.API_SERVER_BASE_URL}/${apiConfig.ENDPOINTS.ITEMS}/bulk`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items }),
+    });
+    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+    return await response.json();
+  } catch (error) {
+    console.error('Error bulk creating items on server:', error);
+    throw error;
+  }
+}

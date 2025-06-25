@@ -15,6 +15,7 @@ import {
   Dimensions,
   Animated,
   BackHandler,
+  Keyboard,
 } from 'react-native';
 import { 
   Package, 
@@ -32,7 +33,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react-native';
-import { saveItem, getAllItems } from '@/services/firebase';
+import { createServerItem, fetchAllServerItems, bulkCreateServerItems } from '@/services/api';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
 import { uploadImageToS3 } from '@/helpers/UploadToAWsBucket.js';
@@ -42,6 +43,7 @@ import DetailsStep from '@/components/DetailsStep';
 import ImageStep from '@/components/ImageStep';
 import ReviewStep from '@/components/ReviewStep';
 import { router } from 'expo-router';
+import Papa from 'papaparse';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -85,6 +87,54 @@ export default function AddItemScreen() {
   const [focusedField, setFocusedField] = useState<FocusableField>(null);
   const [errors, setErrors] = useState<any>({});
   const scrollViewRef = useRef<ScrollView>(null);
+  
+  // Keyboard awareness
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const navigationAnimation = useRef(new Animated.Value(1)).current;
+  const contentAnimation = useRef(new Animated.Value(0)).current;
+
+  // Keyboard listeners
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', (e) => {
+      setKeyboardVisible(true);
+      setKeyboardHeight(e.endCoordinates.height);
+      Animated.parallel([
+        Animated.timing(navigationAnimation, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentAnimation, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    });
+
+    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+      setKeyboardHeight(0);
+      Animated.parallel([
+        Animated.timing(navigationAnimation, {
+          toValue: 1,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(contentAnimation, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: false,
+        }),
+      ]).start();
+    });
+
+    return () => {
+      keyboardDidShowListener?.remove();
+      keyboardDidHideListener?.remove();
+    };
+  }, []);
 
   const handleInputChange = (field: keyof FormData, value: string): void => {
     setFormData(prev => ({
@@ -136,28 +186,21 @@ export default function AddItemScreen() {
     if (!validateStep(2)) return;
     setIsLoading(true);
     try {
-      const itemData: ItemData = {
+      const itemData = {
+        serial_no: formData.serial.trim(),
         name: formData.name.trim(),
+        category: 'General', //  to add a category field to the form
         price: parseFloat(formData.price),
-        image: formData.image.trim(),
-        serial: formData.serial.trim(),
       };
-
-      await saveItem(formData.serial.trim(), itemData);
-      
+      await createServerItem(itemData);
       Alert.alert(
         'Success!',
-        'Item has been added to the database successfully.',
+        'Item has been added successfully.',
         [
           {
             text: 'Add Another',
             onPress: () => {
-              setFormData({
-                name: '',
-                price: '',
-                image: '',
-                serial: '',
-              });
+              setFormData({ name: '', price: '', image: '', serial: '' });
               setCapturedImage(null);
               setStep(0);
               setSelectedAction('add');
@@ -174,8 +217,8 @@ export default function AddItemScreen() {
         ]
       );
     } catch (error) {
-      Alert.alert('Error', 'Failed to add item. Please try again.');
-      console.error('Error adding item:', error);
+      Alert.alert('Error', 'Failed to add item to server. Please try again.');
+      console.error('Error adding item to server:', error);
     } finally {
       setIsLoading(false);
     }
@@ -183,24 +226,17 @@ export default function AddItemScreen() {
 
   const handleViewItems = async (): Promise<void> => {
     try {
-      const rawItems = await getAllItems();
-      const items: DatabaseItem[] = rawItems
-        .filter((item: any) => typeof item.id === 'string')
-        .map((item: any) => ({
-          id: item.id as string,
-          name: item.name,
-        }));
-      const itemsList = items.map(item => `• ${item.name} (${item.id})`).join('\n');
-      
+      const items = await fetchAllServerItems();
+      const itemsList = items.map((item: any) => `• ${item.name} (${item.serial_no})`).join('\n');
       Alert.alert(
-        'Items in Database',
-        items.length > 0 
+        'Items',
+        items.length > 0
           ? `Found ${items.length} items:\n\n${itemsList}`
-          : 'No items found in database. Add some items first!'
+          : 'No items found. Add some items first!'
       );
     } catch (error) {
-      Alert.alert('Error', 'Failed to fetch items from database.');
-      console.error('Error fetching items:', error);
+      Alert.alert('Error', 'Failed to fetch items.');
+      console.error('Error fetching items from server:', error);
     }
   };
 
@@ -282,22 +318,42 @@ export default function AddItemScreen() {
   const handleBulkUpload = async (): Promise<void> => {
     try {
       const result = await DocumentPicker.getDocumentAsync({
-        type: ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'text/csv'],
+        type: ['text/csv'],
         copyToCacheDirectory: true,
       });
-
       if (!result.canceled && result.assets && result.assets[0]) {
-        Alert.alert(
-          'File Selected',
-          `Selected: ${result.assets[0].name}\n\nBulk upload functionality would process this file and add multiple items to the database.`,
-          [{ text: 'OK' }]
-        );
-        // Here you would implement the actual bulk upload logic
-        // parseExcelFile(result.assets[0].uri);
+        const file = result.assets[0];
+        let items: any[] = [];
+        if (file.name.endsWith('.csv')) {
+          // Parse CSV
+          const response = await fetch(file.uri);
+          const csvText = await response.text();
+          const parsed = Papa.parse(csvText, { header: true });
+          items = parsed.data.map((row: any) => ({
+            serial_no: row.serial_no || row.serial,
+            name: row.name,
+            category: row.category || 'General',
+            price: parseFloat(row.price),
+          }));
+        } else {
+          Alert.alert('Unsupported file type', 'Please select a CSV file.');
+          return;
+        }
+        // Filter out invalid rows
+        items = items.filter(item => item.serial_no && item.name && !isNaN(item.price));
+        if (items.length === 0) {
+          Alert.alert('No valid items found in file.');
+          return;
+        }
+        setIsLoading(true);
+        await bulkCreateServerItems(items);
+        Alert.alert('Success!', `Bulk upload successful. ${items.length} items added to server.`);
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to select file. Please try again.');
-      console.error('Error selecting file:', error);
+      Alert.alert('Error', 'Failed to process bulk upload.');
+      console.error('Error in bulk upload:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -388,7 +444,6 @@ export default function AddItemScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.cardSelectionContainer}>
-          <Text style={styles.cardSelectionTitle}>What would you like to do?</Text>
           <View style={styles.cardSelectionGrid}>
             <TouchableOpacity style={styles.cardButton} onPress={() => setSelectedAction('add')}>
               <View style={styles.cardIconContainer}>
@@ -424,51 +479,54 @@ export default function AddItemScreen() {
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
       >
         {/* Content area - takes full screen */}
-        <View style={styles.contentContainer}>
+        <Animated.View style={[
+          styles.contentContainer,
+          {
+            paddingBottom: contentAnimation.interpolate({
+              inputRange: [0, 1],
+              outputRange: [0, keyboardHeight * 0.3],
+            }),
+          }
+        ]}>
           <ScrollView
             ref={scrollViewRef}
             horizontal
             pagingEnabled
             scrollEnabled={false}
             showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ flexDirection: 'row', justifyContent: 'center' }}
+            contentContainerStyle={{ flexDirection: 'row' }}
           >
             {stepComponents.map((Component, idx) => (
               <ScrollView 
                 key={idx} 
                 style={styles.stepContainer}
-                contentContainerStyle={[styles.stepContentContainer, { justifyContent: 'center' }]}
+                contentContainerStyle={styles.stepContentContainer}
                 showsVerticalScrollIndicator={false}
                 bounces={false}
+                keyboardShouldPersistTaps="handled"
               >
                 {Component}
               </ScrollView>
             ))}
           </ScrollView>
-        </View>
+        </Animated.View>
 
-        {/* Step Indicator Overlay */}
-        <View style={styles.stepIndicatorOverlay}>
-          {STEPS.map((_, idx) => (
-            <View key={idx} style={styles.stepIndicatorWrapper}>
-              <View style={[
-                styles.stepIndicator, 
-                idx <= step && styles.stepIndicatorActive
-              ]} />
-              {idx < STEPS.length - 1 && (
-                <View style={[
-                  styles.stepConnector,
-                  idx < step && styles.stepConnectorActive
-                ]} />
-              )}
-            </View>
-          ))}
-        </View>
-
-        {/* Navigation Overlay */}
-        <View style={styles.navigationOverlay}>
+        {/* Navigation Overlay - hides when keyboard is open */}
+        <Animated.View style={[
+          styles.navigationOverlay,
+          {
+            opacity: navigationAnimation,
+            transform: [{
+              translateY: navigationAnimation.interpolate({
+                inputRange: [0, 1],
+                outputRange: [100, 0],
+              })
+            }]
+          }
+        ]}>
           <TouchableOpacity
             style={[styles.navArrow, step === 0 && styles.navArrowDisabled]}
             onPress={goBack}
@@ -479,13 +537,6 @@ export default function AddItemScreen() {
               color={step === 0 ? '#CBD5E1' : '#64748B'} 
             />
           </TouchableOpacity>
-          
-          <View style={styles.navIndicator}>
-            <Text style={styles.navIndicatorText}>
-              {step + 1} / {STEPS.length}
-            </Text>
-          </View>
-          
           <TouchableOpacity
             style={[styles.navArrow, step === STEPS.length - 1 && styles.navArrowDisabled]}
             onPress={goNext}
@@ -496,7 +547,7 @@ export default function AddItemScreen() {
               color={step === STEPS.length - 1 ? '#CBD5E1' : '#64748B'} 
             />
           </TouchableOpacity>
-        </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -511,20 +562,13 @@ const styles = StyleSheet.create({
   // Card Selection Screen
   cardSelectionContainer: {
     flex: 1,
-    paddingTop: 40,
-    paddingHorizontal: 24,
-  },
-  cardSelectionTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#1E293B',
-    textAlign: 'center',
-    marginBottom: 48,
+    paddingTop: 8,
+    paddingHorizontal: 10,
   },
   cardSelectionGrid: {
     flex: 1,
     justifyContent: 'center',
-    gap: 20,
+    gap: 16,
   },
   cardButton: {
     backgroundColor: 'white',
@@ -569,49 +613,12 @@ const styles = StyleSheet.create({
   stepContainer: {
     width: SCREEN_WIDTH,
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 0,
     paddingVertical: 8,
   },
   stepContentContainer: {
     flexGrow: 1,
     paddingBottom: 20,
-  },
-
-  // Step Indicator Overlay
-  stepIndicatorOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    paddingTop: 8,
-    backgroundColor: 'transparent',
-    zIndex: 10,
-  },
-  stepIndicatorWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  stepIndicator: {
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: 'rgba(226, 232, 240, 0.9)',
-  },
-  stepIndicatorActive: {
-    backgroundColor: 'rgba(74, 144, 226, 0.9)',
-  },
-  stepConnector: {
-    width: 60,
-    height: 2,
-    backgroundColor: 'rgba(226, 232, 240, 0.9)',
-    marginHorizontal: 8,
-  },
-  stepConnectorActive: {
-    backgroundColor: 'rgba(74, 144, 226, 0.9)',
   },
 
   // Navigation Overlay
@@ -623,7 +630,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 32,
+    paddingHorizontal: 5,
     paddingVertical: 10,
     paddingBottom: 4,
     backgroundColor: 'transparent',
@@ -645,22 +652,6 @@ const styles = StyleSheet.create({
   navArrowDisabled: {
     backgroundColor: 'rgba(248, 250, 252, 0.5)',
     opacity: 0.5,
-  },
-  navIndicator: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    backgroundColor: 'rgba(241, 245, 249, 0.9)',
-    borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  navIndicatorText: {
-    fontSize: 14,
-    color: '#64748B',
-    fontWeight: '500',
   },
 
   // Scanner (keeping original styles)
