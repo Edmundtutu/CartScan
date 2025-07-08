@@ -13,19 +13,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { 
-  Receipt, 
-  Calendar, 
-  DollarSign, 
-  ShoppingBag, 
-  Trash2, 
-  Eye, 
-  Search,
-  Filter,
-  Download,
-  Share2,
-  MoreVertical
-} from 'lucide-react-native';
+import { Receipt, Calendar, DollarSign, ShoppingBag, Trash2, Eye, Search, Filter, Download, Share2, MoveVertical as MoreVertical } from 'lucide-react-native';
 import { receiptStorage, SavedReceipt } from '@/helpers/receiptStorageHelper';
 
 const { width: screenWidth } = Dimensions.get('window');
