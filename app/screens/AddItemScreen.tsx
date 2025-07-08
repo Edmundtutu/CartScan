@@ -16,7 +16,9 @@ import {
   Animated,
   BackHandler,
   Keyboard,
+  StatusBar as RNStatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { 
   Package, 
   DollarSign, 
@@ -71,6 +73,7 @@ interface DatabaseItem {
 }
 
 export default function AddItemScreen() {
+  const insets = useSafeAreaInsets();
   const [selectedAction, setSelectedAction] = useState<'add' | 'bulk' | 'view' | null>(null);
   const [step, setStep] = useState(0);
   const [formData, setFormData] = useState<FormData>({
@@ -514,7 +517,12 @@ export default function AddItemScreen() {
   }
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[
+      styles.container,
+      Platform.OS === 'android' && { 
+        paddingTop: RNStatusBar.currentHeight || 0 
+      }
+    ]}>
       {renderUploadingOverlay()}
       <KeyboardAvoidingView
         style={{ flex: 1 }}

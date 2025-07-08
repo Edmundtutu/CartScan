@@ -8,8 +8,10 @@ import {
   SafeAreaView,
   Alert,
   Animated,
-  Platform
+  Platform,
+  StatusBar as RNStatusBar
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ShoppingBag, Trash2, CircleAlert as AlertCircle } from 'lucide-react-native';
 import CartItemCard from '@/components/CartItemCard';
 import QrCodeDialogBox from '@/components/QrCodeDialogBox';
@@ -20,6 +22,7 @@ import { ReceiptData } from '@/components/QrCodeDialogBox';
 
 export default function CartScreen() {
   const { state, dispatch, totalItems } = useCart();
+  const insets = useSafeAreaInsets();
   const [isDeleting, setIsDeleting] = useState(false);
   const [showReceipt, setShowReceipt] = useState(false);
   const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
@@ -216,7 +219,7 @@ export default function CartScreen() {
   );
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, Platform.OS === 'android' && styles.androidContainer]}>
       {state.items.length === 0 ? (
         renderEmptyCart()
       ) : (
@@ -230,6 +233,7 @@ export default function CartScreen() {
             style={styles.fullScreenList}
             contentContainerStyle={styles.listContentContainer}
             ListFooterComponent={renderCartSummary}
+            contentInsetAdjustmentBehavior="automatic"
             removeClippedSubviews={true}
             maxToRenderPerBatch={20}
             updateCellsBatchingPeriod={30}
@@ -277,6 +281,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+  androidContainer: {
+    paddingTop: RNStatusBar.currentHeight || 0,
+  },
 
   // Full Screen List (takes entire screen)
   fullScreenList: {
@@ -286,7 +293,7 @@ const styles = StyleSheet.create({
   listContentContainer: {
     paddingTop: 100, // Space for header overlay
     paddingHorizontal: 0,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 40, // Adjust for navigation
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20, // Account for home indicator
   },
 
   // Header Overlay (positioned absolutely)

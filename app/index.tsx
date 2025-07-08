@@ -9,14 +9,16 @@ import {
   Platform,
   Animated,
   ImageBackground,
-  StatusBar as RNStatusBar
+  StatusBar as RNStatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ShoppingCart, Store, Users, Scan } from 'lucide-react-native';
 
 const { width, height } = Dimensions.get('window');
 
 export default function RoleSelectionScreen() {
+  const insets = useSafeAreaInsets();
   const scaleValue = new Animated.Value(1);
   
   interface AnimationCallback {
@@ -47,7 +49,12 @@ export default function RoleSelectionScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, Platform.OS === 'android' && styles.androidContainer]}>
+    <SafeAreaView style={[
+      styles.container, 
+      Platform.OS === 'android' && { 
+        paddingTop: Math.max(RNStatusBar.currentHeight || 0, insets.top) 
+      }
+    ]}>
       <RNStatusBar barStyle="light-content" backgroundColor="rgba(0,0,0,0.7)" translucent />
       <ImageBackground 
         source={{ uri: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2670' }} 
@@ -58,7 +65,7 @@ export default function RoleSelectionScreen() {
         
         <View style={styles.content}>
           {/* Header Section */}
-          <View style={styles.header}>
+          <View style={[styles.header, { paddingTop: Platform.OS === 'ios' ? insets.top : 0 }]}>
             <View style={styles.logoContainer}>
               <Scan size={48} color="white" strokeWidth={2} />
             </View>
@@ -131,9 +138,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121212',
-  },
-  androidContainer: {
-    paddingTop: RNStatusBar.currentHeight || 0,
   },
   backgroundImage: {
     flex: 1,

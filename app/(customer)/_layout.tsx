@@ -1,10 +1,11 @@
 import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet, Platform } from 'react-native';
+import { View, Text, StyleSheet, Platform, StatusBar as RNStatusBar } from 'react-native';
 import { QrCode, ShoppingCart, ArrowLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { TouchableOpacity } from 'react-native';
 import CartIconBadge from '@/components/CartIconBadge';
 import { useCart } from '@/context/CartContext';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function CartTabIcon({ size, color }: { size: number; color: string }) {
   const { totalItems } = useCart();
@@ -26,9 +27,11 @@ function CartTabIcon({ size, color }: { size: number; color: string }) {
 }
 
 function BackButton() {
+  const insets = useSafeAreaInsets();
+  
   return (
     <TouchableOpacity
-      style={styles.backButton}
+      style={[styles.backButton, { paddingTop: Math.max(insets.top, 8) }]}
       onPress={() => router.push('/')}
       activeOpacity={0.7}
     >
@@ -39,11 +42,16 @@ function BackButton() {
 }
 
 export default function CustomerTabLayout() {
+  const insets = useSafeAreaInsets();
+  
   return (
     <Tabs
       screenOptions={{
         headerShown: true,
-        headerStyle: { backgroundColor: '#f8f9fa' },
+        headerStyle: { 
+          backgroundColor: '#f8f9fa',
+          height: Platform.OS === 'ios' ? 44 + insets.top : 56 + (RNStatusBar.currentHeight || 0)
+        },
         headerTitleStyle: {
           fontFamily: 'Inter-SemiBold',
           fontSize: 18,
@@ -55,14 +63,14 @@ export default function CustomerTabLayout() {
         tabBarStyle: {
           backgroundColor: 'white',
           borderTopColor: '#E5E5E7',
-          paddingTop: 8,
-          height: Platform.OS === 'ios' ? 90 : 70,
-          paddingBottom: Platform.OS === 'ios' ? 20 : 10,
+          paddingTop: Platform.OS === 'ios' ? 8 : 4,
+          height: Platform.OS === 'ios' ? 90 + insets.bottom : 70,
+          paddingBottom: Platform.OS === 'ios' ? Math.max(insets.bottom, 20) : 10,
         },
         tabBarLabelStyle: {
           fontFamily: 'Inter-Medium',
           fontSize: 12,
-          marginBottom: Platform.OS === 'ios' ? 8 : 4,
+          marginBottom: Platform.OS === 'ios' ? 4 : 2,
         },
       }}
     >

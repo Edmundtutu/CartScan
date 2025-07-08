@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, SafeAreaView, Animated, Alert, Platform } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, SafeAreaView, Animated, Alert, Platform, StatusBar as RNStatusBar } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Info } from 'lucide-react-native';
 import ScannerView from '@/components/ScannerView';
 import ScannedItemDialog from '@/components/ScannedItemDialog';
@@ -8,6 +9,7 @@ import { receiptStorage } from '@/helpers/receiptStorageHelper';
 import { Product } from '@/types';
 
 export default function ScannerScreen() {
+  const insets = useSafeAreaInsets();
   const [showInfo, setShowInfo] = useState(false);
   const [scannedItem, setScannedItem] = useState<Product | null>(null);
   const [scannedCode, setScannedCode] = useState<string>('');
@@ -113,7 +115,13 @@ export default function ScannerScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, Platform.OS === 'android' && styles.androidContainer]}>
+    <SafeAreaView style={[
+      styles.container, 
+      Platform.OS === 'android' && { 
+        paddingTop: RNStatusBar.currentHeight || 0,
+        paddingBottom: 20 
+      }
+    ]}>
       <ScannerView 
         onItemScanned={handleItemScanned} 
         onReceiptScanned={handleReceiptScanned}
@@ -201,9 +209,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'black',
-  },
-  androidContainer: {
-    paddingBottom: 20, // Extra padding for Android navigation
   },
   // Floating Action Button Styles
   fabContainer: {

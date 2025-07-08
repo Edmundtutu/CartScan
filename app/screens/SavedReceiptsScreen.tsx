@@ -10,10 +10,11 @@ import {
   RefreshControl,
   Dimensions,
   Platform,
-  StatusBar,
+  StatusBar as RNStatusBar,
 } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
-import { Receipt, Calendar, DollarSign, ShoppingBag, Trash2, Eye, Search, Filter, Download, Share2, MoveVertical as MoreVertical } from 'lucide-react-native';
+import { Receipt, Calendar, DollarSign, ShoppingBag, Trash2, Eye, Search, Filter, Download, Share2, MoreVertical, TrendingUp, Clock } from 'lucide-react-native';
 import { receiptStorage, SavedReceipt } from '@/helpers/receiptStorageHelper';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -25,6 +26,8 @@ export default function SavedReceiptsScreen() {
   const [selectedReceipt, setSelectedReceipt] = useState<SavedReceipt | null>(null);
   const [showDetails, setShowDetails] = useState(false);
   const [totalSpending, setTotalSpending] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredReceipts, setFilteredReceipts] = useState<SavedReceipt[]>([]);
 
   // Load receipts when screen comes into focus
   useFocusEffect(
@@ -44,6 +47,14 @@ export default function SavedReceiptsScreen() {
         );
         setReceipts(sortedReceipts);
         
+        // Filter receipts based on search query
+        const filtered = sortedReceipts.filter(receipt => 
+          receipt.txnId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (receipt.storeName && receipt.storeName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+          (receipt.paymentReference && receipt.paymentReference.toLowerCase().includes(searchQuery.toLowerCase()))
+        );
+        setFilteredReceipts(filtered);
+        
         // Calculate total spending
         const total = sortedReceipts.reduce((sum, receipt) => sum + receipt.totalAmount, 0);
         setTotalSpending(total);
@@ -55,6 +66,16 @@ export default function SavedReceiptsScreen() {
       setLoading(false);
     }
   };
+
+  // Update filtered receipts when search query changes
+  useEffect(() => {
+    const filtered = receipts.filter(receipt => 
+      receipt.txnId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (receipt.storeName && receipt.storeName.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (receipt.paymentReference && receipt.paymentReference.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+    setFilteredReceipts(filtered);
+  }, [searchQuery, receipts]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -128,8 +149,10 @@ export default function SavedReceiptsScreen() {
             {item.txnId}
           </Text>
           <Text style={styles.savedDate}>
-            Saved {formatDate(item.savedAt)}
+            <Clock size={12} color="#666" />
+              {formatDate(item.savedAt)}
           </Text>
+          </View>
         </View>
         <TouchableOpacity
           style={styles.moreButton}
@@ -166,6 +189,7 @@ export default function SavedReceiptsScreen() {
         </View>
 
         <View style={styles.amountContainer}>
+          <TrendingUp size={16} color="#34C759" style={{ marginBottom: 4 }} />
           <Text style={styles.amount}>
             {formatCurrency(item.totalAmount)}
           </Text>
@@ -184,9 +208,28 @@ export default function SavedReceiptsScreen() {
 
   const renderHeader = () => (
     <View style={styles.header}>
+      {/* Search Bar */}
+      <View style={styles.searchContainer}>
+        <View style={styles.searchInputWrapper}>
+          <Search size={20} color="#666" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search receipts..."
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <X size={20} color="#666" />
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{receipts.length}</Text>
+          <Text style={styles.statNumber}>{filteredReceipts.length}</Text>
           <Text style={styles.statLabel}>Saved Receipts</Text>
         </View>
         <View style={styles.statCard}>
@@ -289,15 +332,15 @@ export default function SavedReceiptsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#f8f9fa" />
+    <SafeAreaView style={[styles.container, Platform.OS === 'android' && styles.androidContainer]}>
+      <StatusBar style="dark" backgroundColor="#f8f9fa" />
       
       <FlatList
-        data={receipts}
+        data={filteredReceipts}
         renderItem={renderReceiptCard}
         keyExtractor={(item) => item.id}
         ListHeaderComponent={renderHeader}
-        ListEmptyComponent={!loading ? renderEmptyState : null}
+        ListEmptyComponent={!loading && filteredReceipts.length === 0 ? renderEmptyState : null}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -308,7 +351,7 @@ export default function SavedReceiptsScreen() {
         }
         contentContainerStyle={[
           styles.listContainer,
-          receipts.length === 0 && styles.emptyListContainer
+          filteredReceipts.length === 0 && styles.emptyListContainer
         ]}
         showsVerticalScrollIndicator={false}
       />
@@ -323,9 +366,12 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
+  androidContainer: {
+    paddingTop: RNStatusBar.currentHeight || 0,
+  },
   listContainer: {
     paddingHorizontal: 16,
-    paddingBottom: Platform.OS === 'ios' ? 20 : 40,
+    paddingBottom: Platform.OS === 'ios' ? 34 : 20, // Account for home indicator on iOS
   },
   emptyListContainer: {
     flexGrow: 1,
@@ -333,6 +379,28 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 20,
     paddingTop: 10,
+  },
+  searchContainer: {
+    marginBottom: 16,
+  },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  searchInput: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 16,
+    color: '#1a1a1a',
   },
   statsContainer: {
     flexDirection: 'row',
@@ -389,15 +457,20 @@ const styles = StyleSheet.create({
   cardHeaderText: {
     flex: 1,
   },
+  dateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+  },
   transactionId: {
     fontSize: 16,
     fontWeight: '600',
     color: '#1a1a1a',
-    marginBottom: 2,
   },
   savedDate: {
     fontSize: 12,
     color: '#666',
+    marginLeft: 4,
   },
   moreButton: {
     padding: 8,
