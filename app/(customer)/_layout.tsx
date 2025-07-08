@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Platform } from 'react-native';
 import { QrCode, ShoppingCart, ArrowLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { TouchableOpacity } from 'react-native';
@@ -56,12 +56,13 @@ export default function CustomerTabLayout() {
           backgroundColor: 'white',
           borderTopColor: '#E5E5E7',
           paddingTop: 8,
-          height: 90,
+          height: Platform.OS === 'ios' ? 90 : 70,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 10,
         },
         tabBarLabelStyle: {
           fontFamily: 'Inter-Medium',
           fontSize: 12,
-          marginBottom: 8,
+          marginBottom: Platform.OS === 'ios' ? 8 : 4,
         },
       }}
     >

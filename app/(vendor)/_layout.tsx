@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
-import { Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { QrCode, Plus, ArrowLeft } from 'lucide-react-native';
+import { Text, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { QrCode, Plus, ArrowLeft, Receipt } from 'lucide-react-native';
 import { router } from 'expo-router';
 
 function BackButton() {
@@ -34,12 +34,13 @@ export default function VendorTabLayout() {
           backgroundColor: 'white',
           borderTopColor: '#E5E5E7',
           paddingTop: 8,
-          height: 90,
+          height: Platform.OS === 'ios' ? 90 : 70,
+          paddingBottom: Platform.OS === 'ios' ? 20 : 10,
         },
         tabBarLabelStyle: {
           fontFamily: 'Inter-Medium',
           fontSize: 12,
-          marginBottom: 8,
+          marginBottom: Platform.OS === 'ios' ? 8 : 4,
         },
       }}
     >
@@ -57,6 +58,14 @@ export default function VendorTabLayout() {
           tabBarLabel: ({ color }) => <Text style={{ color }}>Add Item</Text>,
           headerTitle: 'Add New Item',
           tabBarIcon: ({ size, color }) => <Plus size={size} color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="saved-receipts"
+        options={{
+          tabBarLabel: ({ color }) => <Text style={{ color }}>Receipts</Text>,
+          headerTitle: 'Saved Receipts',
+          tabBarIcon: ({ size, color }) => <Receipt size={size} color={color} />,
         }}
       />
     </Tabs>

@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
-  Animated
+  Animated,
+  Platform
 } from 'react-native';
 import { ShoppingBag, Trash2, CircleAlert as AlertCircle } from 'lucide-react-native';
 import CartItemCard from '@/components/CartItemCard';
@@ -285,7 +286,7 @@ const styles = StyleSheet.create({
   listContentContainer: {
     paddingTop: 100, // Space for header overlay
     paddingHorizontal: 0,
-    paddingBottom: 20, // Small padding at bottom
+    paddingBottom: Platform.OS === 'ios' ? 20 : 40, // Adjust for navigation
   },
 
   // Header Overlay (positioned absolutely)

@@ -8,7 +8,8 @@ import {
   Dimensions,
   Platform,
   Animated,
-  ImageBackground
+  ImageBackground,
+  StatusBar as RNStatusBar
 } from 'react-native';
 import { router } from 'expo-router';
 import { ShoppingCart, Store, Users, Scan } from 'lucide-react-native';
@@ -46,7 +47,8 @@ export default function RoleSelectionScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, Platform.OS === 'android' && styles.androidContainer]}>
+      <RNStatusBar barStyle="light-content" backgroundColor="rgba(0,0,0,0.7)" translucent />
       <ImageBackground 
         source={{ uri: 'https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?q=80&w=2670' }} 
         style={styles.backgroundImage}
@@ -129,6 +131,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#121212',
+  },
+  androidContainer: {
+    paddingTop: RNStatusBar.currentHeight || 0,
   },
   backgroundImage: {
     flex: 1,

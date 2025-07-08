@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, Text, TouchableOpacity, SafeAreaView, Animated, Alert } from 'react-native';
+import { View, StyleSheet, Text, TouchableOpacity, SafeAreaView, Animated, Alert, Platform } from 'react-native';
 import { Info } from 'lucide-react-native';
 import ScannerView from '@/components/ScannerView';
 import ScannedItemDialog from '@/components/ScannedItemDialog';
@@ -113,7 +113,7 @@ export default function ScannerScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, Platform.OS === 'android' && styles.androidContainer]}>
       <ScannerView 
         onItemScanned={handleItemScanned} 
         onReceiptScanned={handleReceiptScanned}
@@ -201,6 +201,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'black',
+  },
+  androidContainer: {
+    paddingBottom: 20, // Extra padding for Android navigation
   },
   // Floating Action Button Styles
   fabContainer: {
