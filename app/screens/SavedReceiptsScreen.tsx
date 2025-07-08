@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useFocusEffect } from '@react-navigation/native';
-import { Receipt, Calendar, DollarSign, ShoppingBag, Trash2, Eye, Search, Filter, Download, Share2, MoreVertical, TrendingUp, Clock } from 'lucide-react-native';
+import { Receipt, Calendar, DollarSign, ShoppingBag, Trash2, Eye, Search, Filter, Download, Share2, MoveVertical as MoreVertical, TrendingUp, Clock } from 'lucide-react-native';
 import { receiptStorage, SavedReceipt } from '@/helpers/receiptStorageHelper';
 
 const { width: screenWidth } = Dimensions.get('window');
