@@ -36,7 +36,7 @@ import {
 import { createServerItem, fetchAllServerItems, bulkCreateServerItems } from '@/services/api';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import { uploadImageToS3 } from '@/helpers/UploadToAWsBucket.js';
+// import { uploadImageToS3 } from '@/helpers/UploadToAWsBucket.js';
 import { CameraView, useCameraPermissions, BarcodeScanningResult } from 'expo-camera';
 import IdentificationStep from '@/components/IdentificationStep';
 import DetailsStep from '@/components/DetailsStep';
@@ -268,7 +268,9 @@ export default function AddItemScreen() {
   const handleImageUpload = async (imageUri: string): Promise<void> => {
     setIsUploading(true);
     try {
-      const result = await uploadImageToS3(imageUri);
+      // const result = await uploadImageToS3(imageUri);
+      Alert.alert('Temporaliy disabled for a reason.');
+      
       
       if (result.success) {
         setFormData(prev => ({
