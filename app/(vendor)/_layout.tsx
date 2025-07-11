@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Text, StyleSheet, TouchableOpacity, Platform, StatusBar as RNStatusBar } from 'react-native';
-import { QrCode, Plus, ArrowLeft, Receipt } from 'lucide-react-native';
+import { QrCode, Plus, ArrowLeft } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -69,14 +69,6 @@ export default function VendorTabLayout() {
         }}
       />
       <Tabs.Screen
-        name="saved-receipts"
-        options={{
-          tabBarLabel: ({ color }) => <Text style={{ color }}>Receipts</Text>,
-          headerTitle: 'Saved Receipts',
-          tabBarIcon: ({ size, color }) => <Receipt size={size} color={color} />,
-        }}
-      />
-    </Tabs>
   );
 }
 

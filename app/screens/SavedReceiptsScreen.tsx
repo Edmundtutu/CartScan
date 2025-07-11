@@ -230,11 +230,11 @@ export default function SavedReceiptsScreen() {
       <View style={styles.statsContainer}>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{filteredReceipts.length}</Text>
-          <Text style={styles.statLabel}>Saved Receipts</Text>
+          <Text style={styles.statLabel}>My Receipts</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statNumber}>{formatCurrency(totalSpending)}</Text>
-          <Text style={styles.statLabel}>Total Spending</Text>
+          <Text style={styles.statLabel}>Total Spent</Text>
         </View>
       </View>
     </View>
@@ -245,9 +245,9 @@ export default function SavedReceiptsScreen() {
       <View style={styles.emptyIconContainer}>
         <Receipt size={80} color="#E5E5E7" strokeWidth={1.5} />
       </View>
-      <Text style={styles.emptyTitle}>No Saved Receipts</Text>
+      <Text style={styles.emptyTitle}>No Receipts Yet</Text>
       <Text style={styles.emptyText}>
-        Scan receipt QR codes to save them here for future reference
+        Your saved receipts from purchases will appear here
       </Text>
     </View>
   );
@@ -259,7 +259,7 @@ export default function SavedReceiptsScreen() {
       <View style={styles.detailsOverlay}>
         <View style={styles.detailsModal}>
           <View style={styles.detailsHeader}>
-            <Text style={styles.detailsTitle}>Receipt Details</Text>
+            <Text style={styles.detailsTitle}>My Receipt</Text>
             <TouchableOpacity
               style={styles.closeButton}
               onPress={() => setShowDetails(false)}

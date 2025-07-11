@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Platform, StatusBar as RNStatusBar } from 'react-native';
-import { QrCode, ShoppingCart, ArrowLeft } from 'lucide-react-native';
+import { QrCode, ShoppingCart, ArrowLeft, Receipt } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { TouchableOpacity } from 'react-native';
 import CartIconBadge from '@/components/CartIconBadge';
@@ -91,6 +91,14 @@ export default function CustomerTabLayout() {
           tabBarIcon: ({ size, color }) => (
             <CartTabIcon size={size} color={color} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="saved-receipts"
+        options={{
+          tabBarLabel: ({ color }) => <Text style={{ color }}>Receipts</Text>,
+          headerTitle: 'My Receipts',
+          tabBarIcon: ({ size, color }) => <Receipt size={size} color={color} />,
         }}
       />
     </Tabs>
