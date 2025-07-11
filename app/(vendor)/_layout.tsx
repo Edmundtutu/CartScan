@@ -70,6 +70,7 @@ export default function VendorTabLayout() {
       />
       <Tabs.Screen
   )
+  )
   );
 }
 
