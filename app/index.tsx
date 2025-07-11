@@ -10,15 +10,15 @@ import {
   Animated,
   ImageBackground,
   StatusBar as RNStatusBar,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { ShoppingCart, Store, Users, Scan } from 'lucide-react-native';
 
-const { width, height } = Dimensions.get('window');
-
 export default function RoleSelectionScreen() {
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
   const scaleValue = new Animated.Value(1);
   
   interface AnimationCallback {
