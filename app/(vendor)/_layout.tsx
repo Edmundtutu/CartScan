@@ -68,9 +68,7 @@ export default function VendorTabLayout() {
           tabBarIcon: ({ size, color }) => <Plus size={size} color={color} />,
         }}
       />
-      <Tabs.Screen
-  )
-  )
+    </Tabs>
   );
 }
 
