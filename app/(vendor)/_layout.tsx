@@ -5,11 +5,9 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 function BackButton() {
-  const insets = useSafeAreaInsets();
-  
   return (
     <TouchableOpacity
-      style={[styles.backButton, { paddingTop: Math.max(insets.top, 8) }]}
+      style={styles.backButton}
       onPress={() => router.push('/')}
       activeOpacity={0.7}
     >
@@ -56,7 +54,7 @@ export default function VendorTabLayout() {
         name="scanner"
         options={{
           tabBarLabel: ({ color }) => <Text style={{ color }}>Scanner</Text>,
-          headerTitle: 'QR & Barcode Scanner',
+          headerTitle: 'Scanner',
           tabBarIcon: ({ size, color }) => <QrCode size={size} color={color} />,
         }}
       />
@@ -77,7 +75,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
   },
   backButtonText: {
     fontSize: 16,

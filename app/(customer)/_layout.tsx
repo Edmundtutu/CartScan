@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet, Platform, StatusBar as RNStatusBar } from 'react-native';
-import { QrCode, ShoppingCart, ArrowLeft, Receipt } from 'lucide-react-native';
+import { QrCode, ShoppingCart, ArrowLeft, Receipt, List } from 'lucide-react-native';
 import { router } from 'expo-router';
 import { TouchableOpacity } from 'react-native';
 import CartIconBadge from '@/components/CartIconBadge';
@@ -78,7 +78,7 @@ export default function CustomerTabLayout() {
         name="scanner"
         options={{
           tabBarLabel: ({ color }) => <Text style={{ color }}>Scanner</Text>,
-          headerTitle: 'QR & Barcode Scanner',
+          headerTitle: 'Scanner',
           headerRight: () => <CartIconBadge />,
           tabBarIcon: ({ size, color }) => <QrCode size={size} color={color} />,
         }}
@@ -98,7 +98,7 @@ export default function CustomerTabLayout() {
         options={{
           tabBarLabel: ({ color }) => <Text style={{ color }}>Receipts</Text>,
           headerTitle: 'My Receipts',
-          tabBarIcon: ({ size, color }) => <Receipt size={size} color={color} />,
+          tabBarIcon: ({ size, color }) => <List size={size} color={color} />,
         }}
       />
     </Tabs>
@@ -130,7 +130,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    paddingVertical: 8,
   },
   backButtonText: {
     fontSize: 16,
