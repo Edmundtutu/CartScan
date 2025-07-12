@@ -44,19 +44,6 @@ export default function ScannerScreen() {
     setTransactionId('');
   };
 
-  const handleSaveReceipt = async (receipt: any) => {
-    try {
-      const result = await receiptStorage.saveReceipt(receipt);
-      if (result.success) {
-        Alert.alert('Success', 'Receipt saved successfully!');
-      } else {
-        Alert.alert('Error', `Failed to save receipt: ${result.error}`);
-      }
-    } catch (error) {
-      Alert.alert('Error', `Unexpected error: ${error}`);
-    }
-  };
-
   const showInfoDialog = () => {
     setShowInfo(true);
     
@@ -198,7 +185,6 @@ export default function ScannerScreen() {
         <ScannedReceiptDialog
           receiptData={scannedReceipt}
           onClose={handleDialogClose}
-          onSaveReceipt={handleSaveReceipt}
         />
       )}
     </SafeAreaView>

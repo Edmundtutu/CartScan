@@ -9,8 +9,8 @@ import {
   StyleSheet,
   Animated,
   Dimensions,
-  KeyboardAvoidingView,
-  Platform
+  Platform,
+  ScrollView
 } from 'react-native';
 import { Camera, Image as ImageIcon, Link, X, CheckCircle, Upload } from 'lucide-react-native';
 
@@ -117,143 +117,141 @@ const ImageStep: React.FC<ImageStepProps> = ({
   });
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
+    <Animated.View style={[
+      styles.card,
+      { transform: [{ scale: scaleAnimation }] }
+    ]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.iconContainer}>
+          <ImageIcon size={24} color="#8B5CF6" />
+        </View>
+        <Text style={styles.title}>Add Image</Text>
+        <Text style={styles.subtitle}>Show off your item</Text>
+      </View>
+
+      {/* Progress indicator */}
+      <View style={styles.progressContainer}>
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { width: '75%' }]} />
+        </View>
+        <Text style={styles.progressText}>Step 3 of 4</Text>
+      </View>
+
+      {/* Image Actions */}
+      <View style={styles.imageActions}>
+        <TouchableOpacity 
+          style={[styles.imageActionButton, isUploading && styles.buttonDisabled]} 
+          onPress={onCapture} 
+          disabled={isUploading}
+          activeOpacity={0.8}
+        >
+          {isUploading ? (
+            <Animated.View style={{ transform: [{ rotate: uploadRotation }] }}>
+              <Upload size={24} color="#8B5CF6" />
+            </Animated.View>
+          ) : (
+            <Camera size={24} color="#8B5CF6" />
+          )}
+          <Text style={[styles.imageActionText, isUploading && styles.buttonTextDisabled]}>
+            {isUploading ? 'Processing...' : 'Take Photo'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Divider */}
+      <View style={styles.divider}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>OR</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      {/* URL Input */}
+      <Text style={styles.label}>
+        Image URL
+        {(imageUrl || capturedImage) && !error ? (
+          <CheckCircle size={16} color="#10B981" style={styles.checkIcon} />
+        ) : null}
+      </Text>
+
       <Animated.View style={[
-        styles.card,
-        { transform: [{ scale: scaleAnimation }] }
+        styles.inputWrapper,
+        { 
+          borderColor: error ? '#EF4444' : borderColor,
+          backgroundColor: error ? '#FEF2F2' : '#F8FAFC'
+        }
       ]}>
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.iconContainer}>
-            <ImageIcon size={24} color="#8B5CF6" />
-          </View>
-          <Text style={styles.title}>Add Image</Text>
-          <Text style={styles.subtitle}>Show off your item</Text>
+        <View style={styles.inputIconContainer}>
+          <Link size={20} color={isFocused ? '#8B5CF6' : '#94A3B8'} />
         </View>
-
-        {/* Progress indicator */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: '75%' }]} />
-          </View>
-          <Text style={styles.progressText}>Step 3 of 4</Text>
-        </View>
-
-        {/* Image Actions */}
-        <View style={styles.imageActions}>
-          <TouchableOpacity 
-            style={[styles.imageActionButton, isUploading && styles.buttonDisabled]} 
-            onPress={onCapture} 
-            disabled={isUploading}
-            activeOpacity={0.8}
-          >
-            {isUploading ? (
-              <Animated.View style={{ transform: [{ rotate: uploadRotation }] }}>
-                <Upload size={24} color="#8B5CF6" />
-              </Animated.View>
-            ) : (
-              <Camera size={24} color="#8B5CF6" />
-            )}
-            <Text style={[styles.imageActionText, isUploading && styles.buttonTextDisabled]}>
-              {isUploading ? 'Processing...' : 'Take Photo'}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Divider */}
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>OR</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        {/* URL Input */}
-        <Text style={styles.label}>
-          Image URL
-          {(imageUrl || capturedImage) && !error ? (
-            <CheckCircle size={16} color="#10B981" style={styles.checkIcon} />
-          ) : null}
-        </Text>
-
-        <Animated.View style={[
-          styles.inputWrapper,
-          { 
-            borderColor: error ? '#EF4444' : borderColor,
-            backgroundColor: error ? '#FEF2F2' : '#F8FAFC'
-          }
-        ]}>
-          <View style={styles.inputIconContainer}>
-            <Link size={20} color={isFocused ? '#8B5CF6' : '#94A3B8'} />
-          </View>
-          <TextInput
-            style={styles.input}
-            placeholder="Paste image URL here"
-            placeholderTextColor="#94A3B8"
-            value={imageUrl}
-            onChangeText={onImageUrlChange}
-            onFocus={handleFocus}
-            onBlur={handleBlur}
-            autoCapitalize="none"
-            keyboardType="url"
-          />
-        </Animated.View>
-
-        {error && (
-          <Animated.View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </Animated.View>
-        )}
-
-        {/* Image Preview */}
-        {capturedImage && (
-          <Animated.View 
-            style={[
-              styles.imagePreviewContainer,
-              { 
-                transform: [
-                  { scale: imageLoadAnimation },
-                  { 
-                    translateY: imageLoadAnimation.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [20, 0],
-                    })
-                  }
-                ],
-                opacity: imageLoadAnimation,
-              }
-            ]}
-          >
-            <View style={styles.imageFrame}>
-              <Image 
-                source={{ uri: capturedImage }} 
-                style={styles.imagePreview} 
-                resizeMode="cover" 
-              />
-              <View style={styles.imageOverlay}>
-                <TouchableOpacity 
-                  style={styles.removeImageButton} 
-                  onPress={onRemoveImage}
-                  activeOpacity={0.8}
-                >
-                  <X size={18} color="white" />
-                </TouchableOpacity>
-              </View>
-            </View>
-            <Text style={styles.imageCaption}>Tap to remove image</Text>
-          </Animated.View>
-        )}
-
-        {/* Success state */}
-        {(capturedImage || imageUrl) && !error && (
-          <Animated.View style={styles.successContainer}>
-            <CheckCircle size={20} color="#10B981" />
-            <Text style={styles.successText}>
-              {capturedImage ? 'Photo captured!' : 'Image URL added!'}
-            </Text>
-          </Animated.View>
-        )}
+        <TextInput
+          style={styles.input}
+          placeholder="Paste image URL here"
+          placeholderTextColor="#94A3B8"
+          value={imageUrl}
+          onChangeText={onImageUrlChange}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
+          autoCapitalize="none"
+          keyboardType="url"
+        />
       </Animated.View>
-    </KeyboardAvoidingView>
+
+      {error && (
+        <Animated.View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
+        </Animated.View>
+      )}
+
+      {/* Image Preview */}
+      {capturedImage && (
+        <Animated.View 
+          style={[
+            styles.imagePreviewContainer,
+            { 
+              transform: [
+                { scale: imageLoadAnimation },
+                { 
+                  translateY: imageLoadAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [20, 0],
+                  })
+                }
+              ],
+              opacity: imageLoadAnimation,
+            }
+          ]}
+        >
+          <View style={styles.imageFrame}>
+            <Image 
+              source={{ uri: capturedImage }} 
+              style={styles.imagePreview} 
+              resizeMode="cover" 
+            />
+            <View style={styles.imageOverlay}>
+              <TouchableOpacity 
+                style={styles.removeImageButton} 
+                onPress={onRemoveImage}
+                activeOpacity={0.8}
+              >
+                <X size={18} color="white" />
+              </TouchableOpacity>
+            </View>
+          </View>
+          <Text style={styles.imageCaption}>Tap to remove image</Text>
+        </Animated.View>
+      )}
+
+      {/* Success state */}
+      {(capturedImage || imageUrl) && !error && (
+        <Animated.View style={styles.successContainer}>
+          <CheckCircle size={20} color="#10B981" />
+          <Text style={styles.successText}>
+            {capturedImage ? 'Photo captured!' : 'Image URL added!'}
+          </Text>
+        </Animated.View>
+      )}
+    </Animated.View>
   );
 };
 
@@ -269,6 +267,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 24,
     elevation: 12,
+    minHeight: Platform.OS === 'ios' ? 500 : 450, // Ensure minimum height for scrolling
   },
   header: {
     alignItems: 'center',
@@ -387,6 +386,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 12,
     elevation: 3,
+    backgroundColor: '#FFFFFF',
+    minHeight: 56, // Ensure consistent height
   },
   inputIconContainer: {
     marginRight: 12,
@@ -397,6 +398,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#1A202C',
     fontWeight: '500',
+    minHeight: 56, // Match wrapper height
   },
   errorContainer: {
     backgroundColor: '#FEF2F2',

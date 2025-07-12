@@ -481,121 +481,86 @@ export default function AddItemScreen() {
     );
   }
 
-  if (!selectedAction) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.cardSelectionContainer}>
-          <View style={styles.cardSelectionGrid}>
-            <TouchableOpacity style={styles.cardButton} onPress={() => setSelectedAction('add')}>
-              <View style={styles.cardIconContainer}>
-                <Plus size={28} color="#4A90E2" />
-              </View>
-              <Text style={styles.cardButtonText}>Add Item</Text>
-              <Text style={styles.cardButtonDescription}>Add a single item manually</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.cardButton} onPress={handleBulkUpload}>
-              <View style={styles.cardIconContainer}>
-                <FileSpreadsheet size={28} color="#4A90E2" />
-              </View>
-              <Text style={styles.cardButtonText}>Bulk Upload</Text>
-              <Text style={styles.cardButtonDescription}>Import multiple items from file</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity style={styles.cardButton} onPress={handleViewItems}>
-              <View style={styles.cardIconContainer}>
-                <Eye size={28} color="#4A90E2" />
-              </View>
-              <Text style={styles.cardButtonText}>View Items</Text>
-              <Text style={styles.cardButtonDescription}>Browse all saved items</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={[
-      styles.container,
-      Platform.OS === 'android' && { 
-        paddingTop: RNStatusBar.currentHeight || 0 
-      }
-    ]}>
-      {renderUploadingOverlay()}
-      <KeyboardAvoidingView
+  return selectedAction ? (
+    <View style={styles.container}>
+      <KeyboardAvoidingView 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 88 : 0}
       >
-        {/* Content area - takes full screen */}
-        <Animated.View style={[
-          styles.contentContainer,
-          {
-            paddingBottom: contentAnimation.interpolate({
-              inputRange: [0, 1],
-              outputRange: [0, keyboardHeight * 0.3],
-            }),
-          }
-        ]}>
-          <ScrollView
-            ref={scrollViewRef}
-            horizontal
-            pagingEnabled
-            scrollEnabled={false}
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ flexDirection: 'row' }}
-          >
-            {stepComponents.map((Component, idx) => (
-              <ScrollView 
-                key={idx} 
-                style={styles.stepContainer}
-                contentContainerStyle={styles.stepContentContainer}
-                showsVerticalScrollIndicator={false}
-                bounces={false}
-                keyboardShouldPersistTaps="handled"
-              >
-                {Component}
-              </ScrollView>
-            ))}
-          </ScrollView>
-        </Animated.View>
+        <ScrollView
+          contentContainerStyle={[
+            styles.stepContentContainer,
+            { paddingBottom: keyboardVisible ? keyboardHeight + 20 : 100 }
+          ]}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.stepContainer}>
+            {stepComponents[step]}
+          </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
 
-        {/* Navigation Overlay - hides when keyboard is open */}
-        <Animated.View style={[
+      <Animated.View 
+        style={[
           styles.navigationOverlay,
           {
-            opacity: navigationAnimation,
             transform: [{
               translateY: navigationAnimation.interpolate({
                 inputRange: [0, 1],
-                outputRange: [100, 0],
+                outputRange: [100, 0]
               })
-            }]
+            }],
+            opacity: navigationAnimation
           }
-        ]}>
-          <TouchableOpacity
-            style={[styles.navArrow, step === 0 && styles.navArrowDisabled]}
-            onPress={goBack}
-            disabled={step === 0}
-          >
-            <ChevronLeft 
-              size={32} 
-              color={step === 0 ? '#CBD5E1' : '#64748B'} 
-            />
+        ]}
+      >
+        <TouchableOpacity 
+          style={[styles.navArrow, step === 0 && styles.navArrowDisabled]} 
+          onPress={goBack}
+          disabled={step === 0}
+        >
+          <ChevronLeft size={24} color={step === 0 ? '#94A3B8' : '#1E293B'} />
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={styles.navArrow} 
+          onPress={goNext}
+        >
+          <ChevronRight size={24} color="#1E293B" />
+        </TouchableOpacity>
+      </Animated.View>
+    </View>
+  ) : (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.cardSelectionContainer}>
+        <View style={styles.cardSelectionGrid}>
+          <TouchableOpacity style={styles.cardButton} onPress={() => setSelectedAction('add')}>
+            <View style={styles.cardIconContainer}>
+              <Plus size={28} color="#4A90E2" />
+            </View>
+            <Text style={styles.cardButtonText}>Add Item</Text>
+            <Text style={styles.cardButtonDescription}>Add a single item manually</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.navArrow, step === STEPS.length - 1 && styles.navArrowDisabled]}
-            onPress={goNext}
-            disabled={step === STEPS.length - 1}
-          >
-            <ChevronRight 
-              size={32} 
-              color={step === STEPS.length - 1 ? '#CBD5E1' : '#64748B'} 
-            />
+          
+          <TouchableOpacity style={styles.cardButton} onPress={handleBulkUpload}>
+            <View style={styles.cardIconContainer}>
+              <FileSpreadsheet size={28} color="#4A90E2" />
+            </View>
+            <Text style={styles.cardButtonText}>Bulk Upload</Text>
+            <Text style={styles.cardButtonDescription}>Import multiple items from file</Text>
           </TouchableOpacity>
-        </Animated.View>
-      </KeyboardAvoidingView>
+          
+          <TouchableOpacity style={styles.cardButton} onPress={handleViewItems}>
+            <View style={styles.cardIconContainer}>
+              <Eye size={28} color="#4A90E2" />
+            </View>
+            <Text style={styles.cardButtonText}>View Items</Text>
+            <Text style={styles.cardButtonDescription}>Browse all saved items</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
@@ -605,7 +570,6 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
   },
-  
   // Card Selection Screen
   cardSelectionContainer: {
     flex: 1,
@@ -653,55 +617,45 @@ const styles = StyleSheet.create({
   },
 
   // Content
-  contentContainer: {
-    flex: 1,
-    backgroundColor: '#F8FAFC',
-  },
   stepContainer: {
     width: SCREEN_WIDTH,
-    flex: 1,
     paddingHorizontal: 0,
     paddingVertical: 8,
   },
   stepContentContainer: {
     flexGrow: 1,
-    paddingBottom: 20,
   },
-
-  // Navigation Overlay
   navigationOverlay: {
     position: 'absolute',
-    bottom: 0,
+    bottom: Platform.OS === 'ios' ? 34 : 24,
     left: 0,
     right: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 5,
-    paddingVertical: 10,
-    paddingBottom: 4,
+    paddingHorizontal: 20,
     backgroundColor: 'transparent',
     zIndex: 10,
   },
   navArrow: {
-    width: 40,
-    height: 40,
+    width: 48,
+    height: 48,
     borderRadius: 24,
-    backgroundColor: 'rgba(248, 250, 252, 0.9)',
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   navArrowDisabled: {
-    backgroundColor: 'rgba(248, 250, 252, 0.5)',
+    backgroundColor: 'rgba(255, 255, 255, 0.7)',
     opacity: 0.5,
   },
 
-  // Scanner (keeping original styles)
+  // Scanner
   scannerContainer: {
     flex: 1,
     backgroundColor: 'black',

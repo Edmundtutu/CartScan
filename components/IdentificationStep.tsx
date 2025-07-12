@@ -7,7 +7,6 @@ import {
   StyleSheet, 
   Animated,
   Dimensions,
-  KeyboardAvoidingView,
   Platform
 } from 'react-native';
 import { QrCode, Zap, CheckCircle } from 'lucide-react-native';
@@ -81,85 +80,83 @@ const IdentificationStep: React.FC<IdentificationStepProps> = ({
   });
 
   return (
-    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <Animated.View style={[
-        styles.card,
-        {
-          transform: [{ scale: scaleAnimation }],
-        }
-      ]}>
-        {/* Header with icon */}
-        <View style={styles.header}>
-          <View style={styles.iconContainer}>
-            <Zap size={24} color="#4A90E2" />
-          </View>
-          <Text style={styles.title}>Item Identity</Text>
-          <Text style={styles.subtitle}>Start by identifying your item</Text>
+    <Animated.View style={[
+      styles.card,
+      {
+        transform: [{ scale: scaleAnimation }],
+      }
+    ]}>
+      {/* Header with icon */}
+      <View style={styles.header}>
+        <View style={styles.iconContainer}>
+          <Zap size={24} color="#4A90E2" />
+        </View>
+        <Text style={styles.title}>Item Identity</Text>
+        <Text style={styles.subtitle}>Start by identifying your item</Text>
+      </View>
+
+      {/* Progress indicator */}
+      <View style={styles.progressContainer}>
+        <View style={styles.progressBar}>
+          <View style={[styles.progressFill, { width: '25%' }]} />
+        </View>
+        <Text style={styles.progressText}>Step 1 of 4</Text>
+      </View>
+
+      <Text style={styles.label}>
+        Serial Number
+        {value ? <CheckCircle size={16} color="#10B981" style={styles.checkIcon} /> : null}
+      </Text>
+
+      <View style={styles.inputContainer}>
+        <View style={[
+          styles.inputWrapper,
+          { 
+            borderColor: isFocused ? '#4A90E2' : '#E2E8F0',
+            backgroundColor: error ? '#FEF2F2' : '#F8FAFC'
+          }
+        ]}>
+          <TextInput
+            style={[styles.input, error && styles.inputError]}
+            placeholder="Enter or scan serial number"
+            placeholderTextColor="#94A3B8"
+            value={value}
+            onChangeText={onChange}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+            autoCapitalize="none"
+          />
         </View>
 
-        {/* Progress indicator */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: '25%' }]} />
-          </View>
-          <Text style={styles.progressText}>Step 1 of 4</Text>
-        </View>
-
-        <Text style={styles.label}>
-          Serial Number
-          {value ? <CheckCircle size={16} color="#10B981" style={styles.checkIcon} /> : null}
-        </Text>
-
-        <View style={styles.inputContainer}>
-          <View style={[
-            styles.inputWrapper,
-            { 
-              borderColor: isFocused ? '#4A90E2' : '#E2E8F0',
-              backgroundColor: error ? '#FEF2F2' : '#F8FAFC'
-            }
+        <TouchableOpacity 
+          style={styles.scanButton} 
+          onPress={onScan}
+          activeOpacity={0.8}
+        >
+          <Animated.View style={[
+            styles.scanButtonContent,
+            { opacity: scanOpacity }
           ]}>
-            <TextInput
-              style={[styles.input, error && styles.inputError]}
-              placeholder="Enter or scan serial number"
-              placeholderTextColor="#94A3B8"
-              value={value}
-              onChangeText={onChange}
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              autoCapitalize="none"
-            />
-          </View>
+            <QrCode size={24} color="#4A90E2" />
+          </Animated.View>
+          <View style={styles.scanRipple} />
+        </TouchableOpacity>
+      </View>
 
-          <TouchableOpacity 
-            style={styles.scanButton} 
-            onPress={onScan}
-            activeOpacity={0.8}
-          >
-            <Animated.View style={[
-              styles.scanButtonContent,
-              { opacity: scanOpacity }
-            ]}>
-              <QrCode size={24} color="#4A90E2" />
-            </Animated.View>
-            <View style={styles.scanRipple} />
-          </TouchableOpacity>
+      {error && (
+        <View style={styles.errorContainer}>
+          <Text style={styles.errorText}>{error}</Text>
         </View>
+      )}
 
-        {error && (
-          <View style={styles.errorContainer}>
-            <Text style={styles.errorText}>{error}</Text>
-          </View>
-        )}
-
-        {/* Success state */}
-        {value && !error && (
-          <View style={styles.successContainer}>
-              <CheckCircle size={20} color="#10B981" />              
-              <Text style={styles.successText}>Serial In Check</Text>
-          </View>
-        )}
-      </Animated.View>
-    </KeyboardAvoidingView>
+      {/* Success state */}
+      {value && !error && (
+        <View style={styles.successContainer}>
+            <CheckCircle size={20} color="#10B981" />              
+            <Text style={styles.successText}>Serial In Check</Text>
+        </View>
+      )}
+    </Animated.View>
   );
 };
 

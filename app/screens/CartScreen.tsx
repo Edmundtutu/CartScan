@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ShoppingBag, Trash2, CircleAlert as AlertCircle } from 'lucide-react-native';
 import CartItemCard from '@/components/CartItemCard';
 import QrCodeDialogBox from '@/components/QrCodeDialogBox';
+import {receiptStorage} from '@/helpers/receiptStorageHelper';
 import { useCart } from '@/context/CartContext';
 import { CartItem } from '@/types';
 import { processCheckOut } from '@/services/api';
@@ -94,6 +95,18 @@ export default function CartScreen() {
       Alert.alert('Checkout Failed', 'Could not complete checkout. Please try again.');
     } finally {
       setIsProcessing(false);
+    }
+  };
+  const handleSaveReceipt = async (receipt: any) => {
+    try {
+      const result = await receiptStorage.saveReceipt(receipt);
+      if (result.success) {
+        Alert.alert('Success', 'Receipt saved successfully!');
+      } else {
+        Alert.alert('Error', `Failed to save receipt: ${result.error}`);
+      }
+    } catch (error) {
+      Alert.alert('Error', `Unexpected error: ${error}`);
     }
   };
 
@@ -268,6 +281,7 @@ export default function CartScreen() {
                 dispatch({ type: 'CLEAR_CART' });
               }}
               receiptData={receiptData}
+              onSaveReceipt={handleSaveReceipt}
             />
           )}
         </>

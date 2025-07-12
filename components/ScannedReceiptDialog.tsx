@@ -1,17 +1,18 @@
 import React from 'react';
 import {
   View,
-  Image,
   Text,
-  StyleSheet,
-  TouchableOpacity,
   Modal,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+  Image,
   Dimensions,
   Platform,
-  ScrollView,
+  Share
 } from 'react-native';
-import { X, Calendar, Hash, ShoppingBag, CreditCard } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
+import { X, Hash, Calendar, ShoppingBag, CreditCard, Share as ShareIcon } from 'lucide-react-native';
 
 interface ReceiptData {
   txnId: string;
@@ -30,31 +31,46 @@ interface ReceiptData {
 interface ScannedReceiptDialogProps {
   receiptData: ReceiptData;
   onClose: () => void;
-  onSaveReceipt?: (receipt: ReceiptData) => void;
 }
 
 const { width: screenWidth } = Dimensions.get('window');
 
-export default function ScannedReceiptDialog({ 
-  receiptData, 
-  onClose, 
-  onSaveReceipt 
+export default function ScannedReceiptDialog({
+  receiptData,
+  onClose,
 }: ScannedReceiptDialogProps) {
-  
+
   const triggerHapticFeedback = () => {
     if (Platform.OS !== 'web') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   };
 
-  const handleSaveReceipt = () => {
-    triggerHapticFeedback();
-    onSaveReceipt?.(receiptData);
-    onClose();
-  };
+
 
   const handleIgnore = () => {
     triggerHapticFeedback();
+    onClose();
+  };
+
+  const handleShare = async () => {
+    triggerHapticFeedback();
+    try {
+      const message = `Receipt Details
+Transaction ID: ${receiptData.txnId}
+Store: ${receiptData.storeName || 'N/A'}
+Date: ${formatDate(receiptData.date)}
+Items: ${receiptData.itemCount}
+Total: UGX ${receiptData.totalAmount.toFixed(2)}
+${receiptData.paymentReference ? `Payment Ref: ${receiptData.paymentReference}` : ''}`;
+
+      await Share.share({
+        message,
+        title: 'Receipt Details',
+      });
+    } catch (error) {
+      console.error('Error sharing:', error);
+    }
     onClose();
   };
 
@@ -82,7 +98,7 @@ export default function ScannedReceiptDialog({
     >
       <View style={styles.overlay}>
         <View style={styles.dialog}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={styles.closeButton}
             onPress={handleIgnore}
             activeOpacity={0.7}
@@ -90,16 +106,16 @@ export default function ScannedReceiptDialog({
             <X size={20} color="#666" />
           </TouchableOpacity>
 
-          <ScrollView 
+          <ScrollView
             style={styles.scrollView}
             showsVerticalScrollIndicator={false}
           >
             <View style={styles.content}>
               <View style={styles.iconContainer}>
                 <Image
-                    source={require('../assets/images/receipt.png')} 
-                    style={styles.receiptIcon}
-                    resizeMode="contain"
+                  source={require('../assets/images/receipt.png')}
+                  style={styles.receiptIcon}
+                  resizeMode="contain"
                 />
               </View>
 
@@ -161,7 +177,7 @@ export default function ScannedReceiptDialog({
                   <Text style={styles.summaryLabel}>Items Purchased</Text>
                   <Text style={styles.summaryValue}>{receiptData.itemCount}</Text>
                 </View>
-                
+
                 <View style={styles.summaryRow}>
                   <Text style={styles.totalLabel}>Total Amount</Text>
                   <Text style={styles.totalValue}>
@@ -197,7 +213,7 @@ export default function ScannedReceiptDialog({
               </Text>
 
               <View style={styles.actions}>
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.ignoreButton}
                   onPress={handleIgnore}
                   activeOpacity={0.8}
@@ -206,17 +222,19 @@ export default function ScannedReceiptDialog({
                     Ignore
                   </Text>
                 </TouchableOpacity>
-
-                <TouchableOpacity 
-                  style={styles.saveButton}
-                  onPress={handleSaveReceipt}
-                  activeOpacity={0.8}
-                >
-                  <Text style={styles.saveButtonText}>
-                    Save Receipt
-                  </Text>
-                </TouchableOpacity>
               </View>
+
+              {/* Share Button */}
+              <TouchableOpacity
+                style={styles.shareButton}
+                onPress={handleShare}
+                activeOpacity={0.8}
+              >
+                <ShareIcon size={16} color="white" style={styles.shareIcon} />
+                <Text style={styles.shareButtonText}>
+                  Share Receipt
+                </Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         </View>
@@ -276,7 +294,7 @@ const styles = StyleSheet.create({
   receiptIcon: {
     width: 48,
     height: 48,
-    tintColor: '#007AFF', 
+    tintColor: '#007AFF',
   },
   title: {
     fontSize: 22,
@@ -445,5 +463,32 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontFamily: 'Inter-SemiBold',
     marginLeft: 6,
+  },
+  shareButton: {
+    flex: 1,
+    backgroundColor: '#007AFF',
+    paddingVertical: 14,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#007AFF',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  shareIcon: {
+    marginRight: 8,
+  },
+  shareButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+    fontFamily: 'Inter-SemiBold',
   },
 });

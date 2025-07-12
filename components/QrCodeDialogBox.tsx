@@ -5,7 +5,6 @@ import {
   Modal,
   TouchableOpacity,
   StyleSheet,
-  Share,
   Dimensions,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -33,28 +32,13 @@ interface QrCodeDialogBoxProps {
   visible: boolean;
   onClose: () => void;
   receiptData: ReceiptData;
+  onSaveReceipt?: (receipt: ReceiptData) => void;
 }
 
-const QrCodeDialogBox = ({ visible, onClose, receiptData }: QrCodeDialogBoxProps) => {
+const QrCodeDialogBox = ({ visible, onClose, receiptData, onSaveReceipt }: QrCodeDialogBoxProps) => {
   // Generate URL for receipt retrieval
   const apiConfig = getApiConfig();
   const receiptQRData = apiConfig.getTransactionUrl(receiptData.transactionId);
-
-  const handleShare = async () => {
-    try {
-      const message = `Receipt from ${receiptData.merchantName}
-Transaction ID: ${receiptData.transactionId}
-Total: ${receiptData.currency} ${receiptData.amount.toFixed(2)}
-Payment: ${receiptData.paymentMethod}`;
-
-      await Share.share({
-        message,
-        title: 'Payment Receipt',
-      });
-    } catch (error) {
-      console.error('Error sharing:', error);
-    }
-  };
 
   return (
     <Modal
@@ -107,13 +91,16 @@ Payment: ${receiptData.paymentMethod}`;
               </Text>
             </View>
 
-            {/* Share Button */}
+            {/* Save Button */}
             <TouchableOpacity
-              style={styles.shareButton}
-              onPress={handleShare}
+              style={styles.saveButton}
+              onPress={() => {
+                onSaveReceipt?.(receiptData);
+                onClose();
+              }}
             >
-              <Ionicons name="share-outline" size={18} color="white" />
-              <Text style={styles.shareButtonText}>Share Receipt</Text>
+              <Ionicons name="save-outline" size={18} color="white" />
+              <Text style={styles.saveButtonText}>Save Receipt</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -209,7 +196,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 12,
   },
-  shareButton: {
+  saveButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -220,7 +207,7 @@ const styles = StyleSheet.create({
     gap: 8,
     width: '100%',
   },
-  shareButtonText: {
+  saveButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: '500',

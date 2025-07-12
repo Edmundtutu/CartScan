@@ -5,8 +5,6 @@ import {
   TextInput, 
   StyleSheet, 
   Animated,
-  KeyboardAvoidingView,
-  Platform,
   TouchableWithoutFeedback,
   Keyboard
 } from 'react-native';
@@ -114,115 +112,113 @@ const DetailsStep: React.FC<DetailsStepProps> = ({
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <Animated.View style={[
-          styles.card,
-          { transform: [{ scale: scaleAnimation }] }
-        ]}>
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.iconContainer}>
-              <FileText size={24} color="#4A90E2" />
+      <Animated.View style={[
+        styles.card,
+        { transform: [{ scale: scaleAnimation }] }
+      ]}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.iconContainer}>
+            <FileText size={24} color="#4A90E2" />
+          </View>
+          <Text style={styles.title}>Item Details</Text>
+          <Text style={styles.subtitle}>Tell us about your item</Text>
+        </View>
+
+        {/* Progress indicator */}
+        <View style={styles.progressContainer}>
+          <View style={styles.progressBar}>
+            <View style={[styles.progressFill, { width: '50%' }]} />
+          </View>
+          <Text style={styles.progressText}>Step 2 of 4</Text>
+        </View>
+
+        {/* Name Input */}
+        <View style={styles.inputSection}>
+          <Text style={styles.label}>
+            Item Name 
+            {name && !errors?.name ? (
+              <CheckCircle size={16} color="#10B981" style={styles.checkIcon} />
+            ) : null}
+          </Text>
+          <Animated.View style={[
+            styles.inputWrapper,
+            { 
+              borderColor: errors?.name ? '#EF4444' : nameBorderColor,
+              backgroundColor: errors?.name ? '#FEF2F2' : '#F8FAFC'
+            }
+          ]}>
+            <View style={styles.inputIconContainer}>
+              <FileText size={20} color={nameFocused ? '#4A90E2' : '#94A3B8'} />
             </View>
-            <Text style={styles.title}>Item Details</Text>
-            <Text style={styles.subtitle}>Tell us about your item</Text>
-          </View>
-
-          {/* Progress indicator */}
-          <View style={styles.progressContainer}>
-            <View style={styles.progressBar}>
-              <View style={[styles.progressFill, { width: '50%' }]} />
-            </View>
-            <Text style={styles.progressText}>Step 2 of 4</Text>
-          </View>
-
-          {/* Name Input */}
-          <View style={styles.inputSection}>
-            <Text style={styles.label}>
-              Item Name 
-              {name && !errors?.name ? (
-                <CheckCircle size={16} color="#10B981" style={styles.checkIcon} />
-              ) : null}
-            </Text>
-            <Animated.View style={[
-              styles.inputWrapper,
-              { 
-                borderColor: errors?.name ? '#EF4444' : nameBorderColor,
-                backgroundColor: errors?.name ? '#FEF2F2' : '#F8FAFC'
-              }
-            ]}>
-              <View style={styles.inputIconContainer}>
-                <FileText size={20} color={nameFocused ? '#4A90E2' : '#94A3B8'} />
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter product name"
-                placeholderTextColor="#94A3B8"
-                value={name}
-                onChangeText={value => onChange('name', value)}
-                onFocus={handleNameFocus}
-                onBlur={handleNameBlur}
-              />
-            </Animated.View>
-            {errors?.name && (
-              <Animated.View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{errors.name}</Text>
-              </Animated.View>
-            )}
-          </View>
-
-          {/* Price Input */}
-          <View style={styles.inputSection}>
-            <Text style={styles.label}>
-              Price 
-              {price && !errors?.price ? (
-                <CheckCircle size={16} color="#10B981" style={styles.checkIcon} />
-              ) : null}
-            </Text>
-            <Animated.View style={[
-              styles.inputWrapper,
-              { 
-                borderColor: errors?.price ? '#EF4444' : priceBorderColor,
-                backgroundColor: errors?.price ? '#FEF2F2' : '#F8FAFC'
-              }
-            ]}>
-              <View style={styles.inputIconContainer}>
-                <Text style={[
-                  styles.currencySymbol, 
-                  { color: priceFocused ? '#10B981' : '#94A3B8' }
-                ]}>
-                  UGX
-                </Text>
-              </View>
-              <TextInput
-                style={styles.input}
-                placeholder="0"
-                placeholderTextColor="#94A3B8"
-                value={price}
-                onChangeText={handlePriceChange}
-                onFocus={handlePriceFocus}
-                onBlur={handlePriceBlur}
-                keyboardType="decimal-pad"
-              />
-              <View style={styles.trendingIconContainer}>
-                <TrendingUp size={20} color={priceFocused ? '#10B981' : '#94A3B8'} />
-              </View>
-            </Animated.View>
-            {errors?.price && (
-              <Animated.View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{errors.price}</Text>
-              </Animated.View>
-            )}
-          </View>
-          {/* Completion indicator */}
-          {name && price && !errors?.name && !errors?.price && (
-            <Animated.View style={styles.successContainer}>
-              <CheckCircle size={20} color="#10B981" />
-              <Text style={styles.successText}>Details look great!</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Enter product name"
+              placeholderTextColor="#94A3B8"
+              value={name}
+              onChangeText={value => onChange('name', value)}
+              onFocus={handleNameFocus}
+              onBlur={handleNameBlur}
+            />
+          </Animated.View>
+          {errors?.name && (
+            <Animated.View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{errors.name}</Text>
             </Animated.View>
           )}
-        </Animated.View>
-      </KeyboardAvoidingView>
+        </View>
+
+        {/* Price Input */}
+        <View style={styles.inputSection}>
+          <Text style={styles.label}>
+            Price 
+            {price && !errors?.price ? (
+              <CheckCircle size={16} color="#10B981" style={styles.checkIcon} />
+            ) : null}
+          </Text>
+          <Animated.View style={[
+            styles.inputWrapper,
+            { 
+              borderColor: errors?.price ? '#EF4444' : priceBorderColor,
+              backgroundColor: errors?.price ? '#FEF2F2' : '#F8FAFC'
+            }
+          ]}>
+            <View style={styles.inputIconContainer}>
+              <Text style={[
+                styles.currencySymbol, 
+                { color: priceFocused ? '#10B981' : '#94A3B8' }
+              ]}>
+                UGX
+              </Text>
+            </View>
+            <TextInput
+              style={styles.input}
+              placeholder="0"
+              placeholderTextColor="#94A3B8"
+              value={price}
+              onChangeText={handlePriceChange}
+              onFocus={handlePriceFocus}
+              onBlur={handlePriceBlur}
+              keyboardType="decimal-pad"
+            />
+            <View style={styles.trendingIconContainer}>
+              <TrendingUp size={20} color={priceFocused ? '#10B981' : '#94A3B8'} />
+            </View>
+          </Animated.View>
+          {errors?.price && (
+            <Animated.View style={styles.errorContainer}>
+              <Text style={styles.errorText}>{errors.price}</Text>
+            </Animated.View>
+          )}
+        </View>
+        {/* Completion indicator */}
+        {name && price && !errors?.name && !errors?.price && (
+          <Animated.View style={styles.successContainer}>
+            <CheckCircle size={20} color="#10B981" />
+            <Text style={styles.successText}>Details look great!</Text>
+          </Animated.View>
+        )}
+      </Animated.View>
     </TouchableWithoutFeedback>
   );
 };
