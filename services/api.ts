@@ -62,8 +62,7 @@ export async function processCheckOut(cart: any, customerNumber = '0763977921') 
 
   try {
     const result = await createTransaction(payload);
-    // result should contain the transaction data (see your API sample)
-    return result.data; // or just result, depending on your API
+    return result.data || result; // Return the transaction data or the whole result
   } catch (error) {
     throw error;
   }

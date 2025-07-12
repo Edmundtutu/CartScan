@@ -4,7 +4,7 @@
 export const API_CONFIG = {
   // Base URL for the API server
   // Update this when your ngrok URL changes
-  API_SERVER_BASE_URL: 'https://e522-129-205-3-103.ngrok-free.app',
+  API_SERVER_BASE_URL: 'https://35ad14812df8.ngrok-free.app',
   
   // API version
   API_VERSION: 'v1',
@@ -34,7 +34,7 @@ type Environment = 'development' | 'production' | 'staging';
 export const ENV_CONFIG: Record<Environment, { API_SERVER_BASE_URL: string }> = {
   // Development environment
   development: {
-    API_SERVER_BASE_URL: 'https://e522-129-205-3-103.ngrok-free.app',
+    API_SERVER_BASE_URL: 'https://35ad14812df8.ngrok-free.app',
   },
   
   // Production environment (when you deploy)
