@@ -19,6 +19,8 @@ export default {
       supportsTablet: true
     },
     android: {
+      package: "com.edmundtutu.cartscan",
+      versionCode: 1,
       adaptiveIcon: {
         backgroundColor: "#ffffff"
       }
@@ -26,7 +28,7 @@ export default {
     web: {
       bundler: "metro",
       output: "single",
-      favicon: "./assets/images/favicon.png"
+      favicon: "./assets/images/favicon.ico"
     },
     plugins: [
       "expo-router",
@@ -37,6 +39,10 @@ export default {
       typedRoutes: true
     },
     extra: {
+      eas: {
+        projectId: "29e6c30d-2dd6-45bd-981e-bc3c2417b884"
+      },
+
       // Add your AWS credentials here
       awsAccessKey: process.env.AWS_ACCESS_KEY,
       awsSecretKey: process.env.AWS_SECRET_KEY,

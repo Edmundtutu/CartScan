@@ -1,7 +1,7 @@
 # dependencies
 node_modules/
 # Helpers
-helpers/UploadToAWsBucket.js
+# helpers/UploadToAWsBucket.js
 
 # expo
 .expo/
@@ -38,3 +38,6 @@ yarn-error.*
 
 # dev env
 API_CONFIG_README.md
+
+/ios
+/android
